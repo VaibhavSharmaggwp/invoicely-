@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: invoicely-backend
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/invoicely_db}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:YOUR_DATABASE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    # Hibernate DB ke dialect ko samajh sake isliye Postgres specify kar rahe hain
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    # Console mein SQL queries print karne ke liye taaki hum dekh sakein backend kya execute kar raha hai
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+
+# Hamara backend server is port par chalega (Must be at root level, not under spring)
+server:
+  port: 8080
+
