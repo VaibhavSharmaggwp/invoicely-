@@ -11,10 +11,9 @@ import java.util.UUID;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class BusinessResponseDTO {
-    private UUID id;
+public class AuthResponseDTO {
+    private String token;
+    private UUID businessId;
     private String name;
     private String email;
-    private String phone;
-    private String gstNumber;
 }
