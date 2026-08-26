@@ -18,3 +18,8 @@ Thumbs.db
 
 # Log files
 *.log
+
+# Local secrets & configs
+**/application-local.yml
+**/application-*.yml
+!**/application.yml
