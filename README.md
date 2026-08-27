@@ -23,6 +23,9 @@ INVOICELY is an Android-first SaaS platform for invoice generation, client manag
 - **Business Management Endpoints:**
   - `POST /api/v1/businesses` — Register business profile
   - `GET /api/v1/businesses/me` — Get authenticated business profile
+- **Invoice Endpoints:**
+  - `POST /api/v1/invoices` — Create new invoice with line items
+  - `GET /api/v1/invoices` — Get all invoices for logged-in business
 
 ## 🛠️ Setup & Configuration
 

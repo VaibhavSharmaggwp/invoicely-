@@ -25,6 +25,7 @@ public class Customer {
     private String name;
 
     private String phone;
+    private String email;
 
     // Yahan Relation define kar rahe hain: Ek Business ke bahot saare customers ho sakte hain
     // Toh yeh Foreign Key banegi jo Business table ko point karegi

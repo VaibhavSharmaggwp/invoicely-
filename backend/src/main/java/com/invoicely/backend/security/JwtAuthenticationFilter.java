@@ -28,7 +28,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         // 1. Request ke header se 'Authorization' nikalo
         final String authHeader = request.getHeader("Authorization");
         final String jwt;
-        final String userEmail;
+        String userEmail;
 
         // 2. Agar header nahi hai ya "Bearer " se start nahi hota,
         // toh aage badhne do (SecurityConfig decide karega block karna hai ya nahi)
@@ -37,30 +37,46 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
         // 3. "Bearer " ke baad ka actual token nikal lo (substring 7)
-        jwt = authHeader.substring(7);
+        jwt = authHeader.substring(7).trim();
 
-        // 4. Token se email nikalo
-        userEmail = jwtService.extractEmail(jwt);
-
-        // 5. Agar email mila aur abhi tak user authenticate nahi hua hai context mein
-        if(userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null){
-            // DB se user find karo
-            UserDetails userDetails = businessRepository.findByEmail(userEmail)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
-
-            // 6. Agar token valid hai, toh Spring ko bata do ki "Yeh user legit hai"
-            if(jwtService.isTokenValid(jwt, userDetails.getUsername())){
-                // Security token banao
-                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                        userDetails,
-                        null,
-                        userDetails.getAuthorities()
-                );
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
-                // Spring ke context mein save kar do, taaki controllers ko pata chale kaun logged in hai
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+        try {
+            // 4. Token se email nikalo
+            userEmail = jwtService.extractEmail(jwt);
+            if (userEmail != null) {
+                userEmail = userEmail.trim();
             }
+            System.out.println("--> JwtFilter: Extracted email: " + userEmail);
+
+            // 5. Agar email mila aur abhi tak user authenticate nahi hua hai context mein
+            if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                // DB se user find karo
+                UserDetails userDetails = businessRepository.findByEmail(userEmail).orElse(null);
+
+                if (userDetails == null) {
+                    System.out.println("--> JwtFilter ERROR: User with email '" + userEmail + "' NOT found in database!");
+                } else {
+                    boolean valid = jwtService.isTokenValid(jwt, userDetails.getUsername());
+                    System.out.println("--> JwtFilter: Token valid? " + valid);
+
+                    // 6. Agar user mila aur token valid hai, toh Spring ko bata do ki "Yeh user legit hai"
+                    if (valid) {
+                        // Security token banao
+                        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                                userDetails,
+                                null,
+                                userDetails.getAuthorities()
+                        );
+                        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+                        // Spring ke context mein save kar do, taaki controllers ko pata chale kaun logged in hai
+                        SecurityContextHolder.getContext().setAuthentication(authToken);
+                        System.out.println("--> JwtFilter SUCCESS: Set authentication for " + userEmail);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("--> JwtFilter EXCEPTION: " + e.getMessage());
+            e.printStackTrace();
         }
         // 7. Agle filter ya controller ke paas request bhej do
         filterChain.doFilter(request, response);

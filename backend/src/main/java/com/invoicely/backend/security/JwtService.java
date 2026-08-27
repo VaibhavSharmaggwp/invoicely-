@@ -38,7 +38,8 @@ public class JwtService {
     // 3. Check karna ki token valid hai ya nahi (Expired toh nahi hai?)
     public boolean isTokenValid(String token, String userEmail){
         final String email = extractEmail(token);
-        return (email.equals(userEmail)) && !isTokenExpired(token);
+        if (email == null || userEmail == null) return false;
+        return email.trim().equalsIgnoreCase(userEmail.trim()) && !isTokenExpired(token);
     }
     private boolean isTokenExpired(String token){
         return extractExpiration(token).before(new Date());

@@ -27,12 +27,13 @@ public class AuthController {
     }
 
     // Dev Testing ke liye temporary endpoint (Google bypass)
-    @PostMapping("/dev-token")
+    @RequestMapping(value = "/dev-token", method = {RequestMethod.GET, RequestMethod.POST})
     public ResponseEntity<AuthResponseDTO> getDevToken(@RequestParam String email){
+        String cleanEmail = email != null ? email.trim() : "";
         // 1. DB check karo, nahi hai toh dummy bana do taaki error na aaye
-        Business business = businessRepository.findByEmail(email)
+        Business business = businessRepository.findByEmail(cleanEmail)
                 .orElseGet(() -> businessRepository.save(
-                        Business.builder().email(email).name("Test User").build()
+                        Business.builder().email(cleanEmail).name("Test User").build()
                 ));
 
         // 2. Custom JWT generate karo
