@@ -8,6 +8,8 @@ import com.invoicely.backend.entity.Customer;
 import com.invoicely.backend.entity.Invoice;
 import com.invoicely.backend.entity.InvoiceItem;
 import com.invoicely.backend.enums.InvoiceStatus;
+import com.invoicely.backend.event.InvoiceCreatedEvent;
+import com.invoicely.backend.kafka.InvoiceProducer;
 import com.invoicely.backend.repository.BusinessRepository;
 import com.invoicely.backend.repository.CustomerRepository;
 import com.invoicely.backend.repository.InvoiceRepository;
@@ -25,6 +27,7 @@ public class InvoiceService {
     private final InvoiceRepository invoiceRepository;
     private final CustomerRepository customerRepository;
     private final BusinessRepository businessRepository;
+    private final InvoiceProducer invoiceProducer;
 
     // @Transactional ensure karta hai ki agar beech mein koi error aaye,
     // toh aadhi adhuri DB entry save na ho (Maan lo invoice save ho gaya par items nahi).
@@ -77,6 +80,18 @@ public class InvoiceService {
 
         // 5. Database mein save karo (Cascade = All ki wajah se items khud ba khud save ho jayenge)
         Invoice savedInvoice = invoiceRepository.save(invoice);
+
+        // --- KAFKA EVENT TRIGGER ---
+        // UI ko turant response bhej do, aur background me event trigger kar do
+        InvoiceCreatedEvent event = InvoiceCreatedEvent.builder()
+                .invoiceId(savedInvoice.getId())
+                .invoiceNumber(savedInvoice.getInvoiceNumber())
+                .customerEmail(customer.getEmail())
+                .customerName(customer.getName())
+                .totalAmount(savedInvoice.getTotalAmount())
+                .build();
+
+        invoiceProducer.sendInvoiceCreatedEvent(event);
 
         // 6. Clean Response DTO return karo
         return InvoiceResponseDTO.builder()

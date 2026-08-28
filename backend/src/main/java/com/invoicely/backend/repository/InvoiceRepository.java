@@ -13,4 +13,5 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
 
     // Pending Invoices count krne kr liye
     List<Invoice> findByBusinessIdAndStatus(UUID businessId, InvoiceStatus status);
+    List<Invoice> findByStatusAndDueDateLessThanEqual(InvoiceStatus status, java.time.LocalDate date);
 }

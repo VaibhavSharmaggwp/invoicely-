@@ -5,6 +5,24 @@ spring:
   profiles:
     active: local
 
+  kafka:
+    # 1. Kafka server kahan chal raha hai? (Docker container ka port)
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+
+    # 2. Consumer ki settings (Jo messages sunega)
+    consumer:
+      # Group ID Kafka ko batata hai ki yeh application kis group ka hissa hai.
+      # Agar hum Invoicely ke 3 instances chalayenge, toh Group ID same hoga taaki ek message 3 baar process na ho.
+      group-id: invoicely-notification-group
+      # Messages ko string format mein read karne ke liye
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+    # 3. Producer ki settings (Jo messages bhejega)
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5433/invoicely_db}
     username: ${DB_USERNAME:postgres}

@@ -75,6 +75,12 @@
 			<scope>runtime</scope>
 		</dependency>
 
+		<!-- Spring Kafka: Yeh hamari app ko Kafka Producer aur Consumer banne ki power dega -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-kafka</artifactId>
+		</dependency>
+
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
