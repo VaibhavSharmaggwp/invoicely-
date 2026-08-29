@@ -47,4 +47,13 @@ public class InvoiceController {
         return ResponseEntity.ok(myInvoices);
     }
 
+    @GetMapping("dashboard-summary")
+    public ResponseEntity<com.invoicely.backend.dto.DashboardSummaryDTO> getDashboardSummary() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userEmail = authentication.getName();
+
+        com.invoicely.backend.dto.DashboardSummaryDTO summary = invoiceService.getDashboardSummary(userEmail);
+        return ResponseEntity.ok(summary);
+    }
+
 }

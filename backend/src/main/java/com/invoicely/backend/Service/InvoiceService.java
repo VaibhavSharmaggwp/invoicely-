@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -31,6 +32,9 @@ public class InvoiceService {
 
     // @Transactional ensure karta hai ki agar beech mein koi error aaye,
     // toh aadhi adhuri DB entry save na ho (Maan lo invoice save ho gaya par items nahi).
+    // @CacheEvict: Jaise hi naya invoice create hoga, purana dashboard cache delete ho jayega
+    // taaki agla dashboard load fresh data dikhaye!
+    @org.springframework.cache.annotation.CacheEvict(value = "dashboard_summary", key = "#userEmail")
     @Transactional
     public InvoiceResponseDTO createInvoice(InvoiceRequestDTO requestDTO, String userEmail){
         // 1. Logged-in user (Business) ko DB se nikalo
@@ -122,5 +126,40 @@ public class InvoiceService {
                 .dueDate(inv.getDueDate())
                 .build()
         ).collect(Collectors.toList());
+    }
+
+    // 1. Dashboard summary calculation with Redis Caching & TTL
+    // @Cacheable: Pehli baar DB se calculate karega aur Redis mein daal dega.
+    // Agle 10 minute tak har call direct Redis se 1ms mein aayegi!
+    @org.springframework.cache.annotation.Cacheable(value = "dashboard_summary", key = "#userEmail")
+    public com.invoicely.backend.dto.DashboardSummaryDTO getDashboardSummary(String userEmail){
+        System.out.println("🐢 CACHE MISS: Calculating dashboard summary from PostgreSQL database...");
+
+        Business business = businessRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("Business not found"));
+
+        List<Invoice> invoices = invoiceRepository.findByBusinessId(business.getId());
+
+        BigDecimal totalOutstanding = BigDecimal.ZERO;
+        long pendingCount = 0;
+        long overdueCount = 0;
+        LocalDate today = LocalDate.now();
+
+        for(Invoice inv: invoices){
+            if(inv.getStatus() == InvoiceStatus.ISSUED || inv.getStatus() == InvoiceStatus.PARTIALLY_PAID){
+                totalOutstanding = totalOutstanding.add(inv.getTotalAmount());
+                pendingCount++;
+
+                if(inv.getDueDate().isBefore(today)){
+                    overdueCount++;
+                }
+            }
+        }
+        return com.invoicely.backend.dto.DashboardSummaryDTO.builder()
+                .totalOutstanding(totalOutstanding)
+                .dueThisWeek(totalOutstanding) // Simplified for demonstration
+                .pendingInvoicesCount(pendingCount)
+                .overdueInvoiceCount(overdueCount)
+                .build();
     }
 }

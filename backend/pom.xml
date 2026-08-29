@@ -81,6 +81,12 @@
 			<artifactId>spring-boot-starter-kafka</artifactId>
 		</dependency>
 
+		<!-- Spring Data Redis: Caching aur in-memory data store ke liye -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-redis</artifactId>
+		</dependency>
+
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
