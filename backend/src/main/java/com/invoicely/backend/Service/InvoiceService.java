@@ -3,6 +3,7 @@ package com.invoicely.backend.Service;
 
 import com.invoicely.backend.dto.InvoiceRequestDTO;
 import com.invoicely.backend.dto.InvoiceResponseDTO;
+import com.invoicely.backend.dto.PublicInvoiceDTO;
 import com.invoicely.backend.entity.Business;
 import com.invoicely.backend.entity.Customer;
 import com.invoicely.backend.entity.Invoice;
@@ -161,5 +162,33 @@ public class InvoiceService {
                 .pendingInvoicesCount(pendingCount)
                 .overdueInvoiceCount(overdueCount)
                 .build();
+    }
+
+    // Public link ke liye invoice fetch karna
+    public com.invoicely.backend.dto.PublicInvoiceDTO getPublicInvoice(java.util.UUID invoiceId) {
+        Invoice invoice = invoiceRepository.findById(invoiceId)
+                .orElseThrow(() -> new RuntimeException("Invoice not found or invalid link"));
+
+        // Items mapping
+        List<com.invoicely.backend.dto.InvoiceItemRequestDTO> publistItem = invoice.getItems().stream().map(item->{
+                    com.invoicely.backend.dto.InvoiceItemRequestDTO dto = new com.invoicely.backend.dto.InvoiceItemRequestDTO();
+                    dto.setDescription(item.getDescription());
+                    dto.setQuantity(item.getQuantity());
+                    dto.setUnitPrice(item.getUnitPrice());
+                    return dto;
+                }).collect(Collectors.toList());
+
+        // Secure Public DTO return karo
+        return com.invoicely.backend.dto.PublicInvoiceDTO.builder()
+                .invoiceNumber(invoice.getInvoiceNumber())
+                .businessName(invoice.getBusiness().getName())
+                .customerName(invoice.getCustomer().getName())
+                .issueDate(invoice.getIssueDate())
+                .dueDate(invoice.getDueDate())
+                .totalAmount(invoice.getTotalAmount())
+                .status(invoice.getStatus().name())
+                .items(publistItem)
+                .build();
+
     }
 }

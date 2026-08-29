@@ -25,7 +25,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/health").permitAll() // Health check koi bhi dekh sakta hai
                         .requestMatchers("/api/v1/auth/**").permitAll() // Login/Signup public hona chahiye
-                        .requestMatchers("/error").permitAll() // Error endpoint public to prevent 403 masking
+                        // Public invoice links ke liye we dont need JWT
+                        .requestMatchers("/api/v1/public/**").permitAll()
+                        .requestMatchers("/error").permitAll() // Error endpoint public to prevent 403 masking error
                         .anyRequest().authenticated() // Baaki saari APIs ke liye Token chahiye
                 )
         // 3. Session management ko Stateless karo. (Kyunki hum JWT use kar rahe hain,

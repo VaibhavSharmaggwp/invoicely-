@@ -22,6 +22,7 @@
   - `GET /api/v1/auth/dev-token` — Dev token generator endpoint for rapid API testing
   - `POST /api/v1/businesses` — Register business profile
   - `GET /api/v1/businesses/me` — Fetch authenticated business profile
+  - `GET /api/v1/public/invoices/{id}` — Public link endpoint for customers to view invoice details without JWT authentication (e.g., WhatsApp/Email notification links)
 
 ### 3. Asynchronous Event-Driven Architecture (Apache Kafka)
 - **Event Producer & Consumer:** Uses `spring-boot-starter-kafka` to publish `InvoiceCreatedEvent` asynchronously upon invoice creation.
@@ -125,6 +126,11 @@ cd backend
    Authorization: Bearer <YOUR_JWT_TOKEN>
    ```
 
+5. **View Public Invoice via Shareable Link (No JWT Required):**
+   ```http
+   GET http://localhost:8080/api/v1/public/invoices/<INVOICE_UUID>
+   ```
+
 ---
 
 ## 📂 Repository Structure
@@ -138,7 +144,7 @@ INVOICELY/
 │       └── main/
 │           ├── java/com/invoicely/backend/
 │           │   ├── config/      # Redis & Security Configurations
-│           │   ├── controller/  # REST Endpoints (Auth, Invoice, Business)
+│           │   ├── controller/  # REST Endpoints (Auth, Invoice, PublicInvoice, Business)
 │           │   ├── dto/         # Request & Response Data Transfer Objects
 │           │   ├── model/       # JPA Entities
 │           │   ├── repository/  # Data Access Interfaces
