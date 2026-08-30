@@ -23,3 +23,6 @@ Thumbs.db
 **/application-local.yml
 **/application-*.yml
 !**/application.yml
+.env
+.env.*
+!.env.example

@@ -19,4 +19,5 @@ public class PublicInvoiceDTO {
     private BigDecimal totalAmount;
     private  String status;
     private List<InvoiceItemRequestDTO> items; // Reuse kar rahe hain item list ke liye
+    private String paymentUrl;
 }

@@ -1,6 +1,7 @@
 package com.invoicely.backend.Service;
 
 
+import com.invoicely.backend.Service.RazorpayService;
 import com.invoicely.backend.dto.InvoiceRequestDTO;
 import com.invoicely.backend.dto.InvoiceResponseDTO;
 import com.invoicely.backend.dto.PublicInvoiceDTO;
@@ -30,6 +31,9 @@ public class InvoiceService {
     private final CustomerRepository customerRepository;
     private final BusinessRepository businessRepository;
     private final InvoiceProducer invoiceProducer;
+    private final RazorpayService razorpayService;
+    
+
 
     // @Transactional ensure karta hai ki agar beech mein koi error aaye,
     // toh aadhi adhuri DB entry save na ho (Maan lo invoice save ho gaya par items nahi).
@@ -178,6 +182,12 @@ public class InvoiceService {
                     return dto;
                 }).collect(Collectors.toList());
 
+        // Agar invoice ISSUED hai, toh naya payment link generate karo
+        String paymentLink = null;
+        if (invoice.getStatus() == InvoiceStatus.ISSUED) {
+            paymentLink = razorpayService.createPaymentLink(invoice);
+        }
+
         // Secure Public DTO return karo
         return com.invoicely.backend.dto.PublicInvoiceDTO.builder()
                 .invoiceNumber(invoice.getInvoiceNumber())
@@ -187,6 +197,7 @@ public class InvoiceService {
                 .dueDate(invoice.getDueDate())
                 .totalAmount(invoice.getTotalAmount())
                 .status(invoice.getStatus().name())
+                .paymentUrl(paymentLink)
                 .items(publistItem)
                 .build();
 

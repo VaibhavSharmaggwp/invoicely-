@@ -53,4 +53,8 @@ server:
 app:
   google:
     client-id: ${GOOGLE_CLIENT_ID:YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com}
+  razorpay:
+    key-id: ${RAZORPAY_KEY_ID:rzp_test_TW5y6vS8i6XvDs}
+    key-secret: ${RAZORPAY_KEY_SECRET:YOUR_RAZORPAY_KEY_SECRET}
+    webhook-secret: ${RAZORPAY_WEBHOOK_SECRET:YOUR_RAZORPAY_WEBHOOK_SECRET}
 
