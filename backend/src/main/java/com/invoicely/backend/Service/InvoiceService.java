@@ -169,6 +169,7 @@ public class InvoiceService {
     }
 
     // Public link ke liye invoice fetch karna
+    @Transactional
     public com.invoicely.backend.dto.PublicInvoiceDTO getPublicInvoice(java.util.UUID invoiceId) {
         Invoice invoice = invoiceRepository.findById(invoiceId)
                 .orElseThrow(() -> new RuntimeException("Invoice not found or invalid link"));

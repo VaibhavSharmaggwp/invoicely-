@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${invoice.invoiceNumber} + ' - Invoice'">Invoice View</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563EB;
+            --primary-hover: #1D4ED8;
+            --bg-page: #F8FAFC;
+            --bg-card: #FFFFFF;
+            --text-heading: #0F172A;
+            --text-body: #334155;
+            --text-muted: #64748B;
+            --border-light: #E2E8F0;
+            --badge-issued-bg: #EFF6FF;
+            --badge-issued-text: #1D4ED8;
+            --badge-issued-border: #BFDBFE;
+            --badge-paid-bg: #ECFDF5;
+            --badge-paid-text: #047857;
+            --badge-paid-border: #A7F3D0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-page);
+            color: var(--text-body);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 24px;
+        }
+
+        .invoice-card {
+            width: 100%;
+            max-width: 680px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05), 0 8px 10px -6px rgba(15, 23, 42, 0.03);
+            padding: 40px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 1px solid var(--border-light);
+            padding-bottom: 24px;
+            margin-bottom: 28px;
+        }
+
+        .brand h2 {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-heading);
+            letter-spacing: -0.5px;
+        }
+
+        .brand p {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-top: 4px;
+            font-weight: 500;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 14px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            background-color: var(--badge-issued-bg);
+            color: var(--badge-issued-text);
+            border: 1px solid var(--badge-issued-border);
+        }
+
+        .badge-paid {
+            background-color: var(--badge-paid-bg);
+            color: var(--badge-paid-text);
+            border-color: var(--badge-paid-border);
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            background-color: #F1F5F9;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 32px;
+        }
+
+        .meta-item label {
+            display: block;
+            font-size: 11px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-item span {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-heading);
+        }
+
+        .table-section {
+            margin-bottom: 28px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            font-weight: 700;
+            padding: 12px 16px;
+            border-bottom: 2px solid var(--border-light);
+            text-align: left;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-light);
+            font-size: 14px;
+            color: var(--text-body);
+            font-weight: 500;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .summary-box {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 24px;
+            background-color: #0F172A;
+            border-radius: 12px;
+            color: #FFFFFF;
+            margin-bottom: 28px;
+        }
+
+        .summary-box label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #94A3B8;
+        }
+
+        .summary-box .amount {
+            font-size: 26px;
+            font-weight: 700;
+            color: #FFFFFF;
+            letter-spacing: -0.5px;
+        }
+
+        .btn-pay {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            background-color: var(--primary);
+            color: #FFFFFF;
+            font-weight: 600;
+            font-size: 16px;
+            padding: 16px;
+            border-radius: 12px;
+            text-decoration: none;
+            transition: all 0.2s ease-in-out;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+        }
+
+        .btn-pay:hover {
+            background-color: var(--primary-hover);
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
+        }
+
+        .paid-banner {
+            text-align: center;
+            background-color: var(--badge-paid-bg);
+            color: var(--badge-paid-text);
+            border: 1px solid var(--badge-paid-border);
+            font-weight: 600;
+            font-size: 15px;
+            padding: 16px;
+            border-radius: 12px;
+        }
+
+        .footer {
+            margin-top: 28px;
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .footer strong {
+            color: var(--text-heading);
+        }
+    </style>
+</head>
+<body>
+
+<div class="invoice-card">
+    <!-- Header -->
+    <div class="header">
+        <div class="brand">
+            <h2 th:text="${invoice.businessName}">Business Name</h2>
+            <p th:text="'Invoice ' + ${invoice.invoiceNumber}">INV-0000</p>
+        </div>
+        <span class="badge" 
+              th:classappend="${invoice.status == 'PAID' ? 'badge-paid' : ''}"
+              th:text="${invoice.status}">ISSUED</span>
+    </div>
+
+    <!-- Metadata Grid -->
+    <div class="meta-grid">
+        <div class="meta-item">
+            <label>Billed To</label>
+            <span th:text="${invoice.customerName}">Customer Name</span>
+        </div>
+        <div class="meta-item">
+            <label>Issue Date</label>
+            <span th:text="${invoice.issueDate}">2026-09-01</span>
+        </div>
+        <div class="meta-item text-right">
+            <label>Due Date</label>
+            <span th:text="${invoice.dueDate}">2026-09-15</span>
+        </div>
+    </div>
+
+    <!-- Item Table -->
+    <div class="table-section">
+        <table>
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th class="text-right">Qty</th>
+                    <th class="text-right">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="item : ${invoice.items}">
+                    <td th:text="${item.description}">Web Development</td>
+                    <td class="text-right" th:text="${item.quantity}">1</td>
+                    <td class="text-right" th:text="'₹' + ${#numbers.formatDecimal(item.unitPrice, 1, 2)}">₹1,500.00</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Summary Total -->
+    <div class="summary-box">
+        <label>Total Amount Due</label>
+        <span class="amount" th:text="'₹' + ${#numbers.formatDecimal(invoice.totalAmount, 1, 2)}">₹1,700.00</span>
+    </div>
+
+    <!-- Payment CTA -->
+    <div th:if="${invoice.status == 'ISSUED' and invoice.paymentUrl != null}">
+        <a th:href="${invoice.paymentUrl}" target="_blank" class="btn-pay">
+            Pay Invoice with Razorpay →
+        </a>
+    </div>
+
+    <div th:if="${invoice.status == 'PAID'}" class="paid-banner">
+        ✓ This Invoice Has Been Fully Paid
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        Powered by <strong>Invoicely</strong> • Secure Billing System
+    </div>
+</div>
+
+</body>
+</html>

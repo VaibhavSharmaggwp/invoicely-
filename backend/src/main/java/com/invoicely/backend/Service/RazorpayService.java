@@ -39,11 +39,20 @@ public class RazorpayService {
                     .atZone(ZoneId.systemDefault()).toEpochSecond();
             paymentLinkRequest.put("expire_by", expireBy);
 
-            // Add customer details
+            // Add customer details safely
             JSONObject customer = new JSONObject();
-            customer.put("name", invoice.getCustomer().getName());
-            customer.put("email", invoice.getCustomer().getEmail());
-            customer.put("contact", invoice.getCustomer().getPhone());
+            customer.put("name", invoice.getCustomer().getName() != null ? invoice.getCustomer().getName() : "Customer");
+            
+            String custEmail = invoice.getCustomer().getEmail();
+            if (custEmail != null && !custEmail.isBlank()) {
+                customer.put("email", custEmail);
+            }
+            
+            String custPhone = invoice.getCustomer().getPhone();
+            if (custPhone != null && !custPhone.isBlank()) {
+                customer.put("contact", custPhone);
+            }
+            
             paymentLinkRequest.put("customer", customer);
 
             // Notes allow us to pass custom data. We pass invoiceId so we know which invoice was paid!
@@ -60,6 +69,7 @@ public class RazorpayService {
 
         }catch (Exception e){
             System.err.println("❌ Failed to create Razorpay Payment Link: " + e.getMessage());
+            e.printStackTrace();
             return null;
         }
     }

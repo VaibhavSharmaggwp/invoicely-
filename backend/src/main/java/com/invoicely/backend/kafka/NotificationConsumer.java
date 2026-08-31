@@ -1,6 +1,7 @@
 package com.invoicely.backend.kafka;
 
 
+import com.invoicely.backend.Service.PdfEmailService;
 import com.invoicely.backend.event.InvoiceCreatedEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -11,6 +12,7 @@ import tools.jackson.databind.ObjectMapper;
 @RequiredArgsConstructor
 public class NotificationConsumer {
     private final ObjectMapper objectMapper;
+    private final PdfEmailService pdfEmailService;
 
     // @KafkaListener is method ko hamesha background me run karta rahega.
     // Jaise hi 'invoice-events' topic par koi naya message aayega, yeh function trigger ho jayega.
@@ -19,6 +21,16 @@ public class NotificationConsumer {
         try{
             // 1. JSON text ko wapas Java Object mein badlo
             InvoiceCreatedEvent event = objectMapper.readValue(eventJson, InvoiceCreatedEvent.class);
+            System.out.println("🔔 Kafka Consumer: Received event for " + event.getInvoiceNumber() + ". Generating PDF...");
+
+            // Yahan hum apna naya email service call kar rahe hain!
+            pdfEmailService.sendInvoiceEmail(
+                    event.getCustomerEmail(),
+                    event.getCustomerName(),
+                    event.getInvoiceNumber(),
+                    event.getTotalAmount().toString(),
+                    event.getInvoiceId().toString()
+            );
 
             // 2. Yahan hum actual Email ya WhatsApp API call karenge aage chal ke.
             // Abhi ke liye hum sirf console par print kar rahe hain.

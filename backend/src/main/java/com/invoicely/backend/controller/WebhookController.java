@@ -25,22 +25,22 @@ public class WebhookController {
     @PostMapping("/razorpay")
     public ResponseEntity<String> handleRazorpayWebhook(
             @RequestBody String rawPayload,
-            @RequestHeader("x-razorpay-signature") String signature){
-        try{
-            // 1. Verify the signature using Razorpay's SDK
-            boolean isValid = Utils.verifySignature(rawPayload, signature, webhookSecret);
+            @RequestHeader(value = "x-razorpay-signature", required = false) String signature) {
 
-            if(!isValid){
+        try {
+            // 1. Verify the signature (Security Check)
+            if (signature == null || !Utils.verifyWebhookSignature(rawPayload, signature, webhookSecret)) {
                 System.out.println("🚨 INTRUSION ATTEMPT: Invalid Webhook Signature!");
-                return ResponseEntity.badRequest().body("Invalid Webhook Signature!");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid Webhook Signature!");
             }
 
-            // 2. Parse JSON payload from Razorpay using org.json.JSONObject
+            // 2. Parse JSON payload from Razorpay
             JSONObject root = new JSONObject(rawPayload);
             String event = root.optString("event");
 
             System.out.println("✅ Signature Verified. Received Razorpay Event: " + event);
 
+            // 3. Process captured payment / paid link
             if ("payment.captured".equals(event) || "order.paid".equals(event) || "payment_link.paid".equals(event)) {
                 JSONObject payload = root.optJSONObject("payload");
                 if (payload != null) {
@@ -75,8 +75,8 @@ public class WebhookController {
             }
 
             return ResponseEntity.ok("Webhook processed successfully");
-        }catch (Exception e){
-            System.err.println("Webhook processing error: " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("❌ Webhook processing error: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Webhook Error: " + e.getMessage());
         }
     }
