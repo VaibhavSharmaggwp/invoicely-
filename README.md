@@ -1,85 +1,118 @@
-# INVOICELY — Enterprise Invoice & Payment Management SaaS
+# ⚡ INVOICELY — Enterprise Invoice & Payment Management SaaS
 
-**INVOICELY** is a modern, high-performance, event-driven SaaS backend for automated invoice generation, client management, payment tracking, Razorpay payment links, automated webhooks, asynchronous PDF generation, automated email delivery via Kafka, and real-time dashboard analytics.
+[![Java 21](https://img.shields.io/badge/Java-21-orange.svg?style=flat-square&logo=openjdk)](https://www.oracle.com/java/)
+[![Spring Boot 3](https://img.shields.io/badge/Spring_Boot-3.4-brightgreen.svg?style=flat-square&logo=springboot)](https://spring.io/projects/spring-boot)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue.svg?style=flat-square&logo=postgresql)](https://www.postgresql.org/)
+[![Apache Kafka](https://img.shields.io/badge/Apache_Kafka-Event_Driven-black.svg?style=flat-square&logo=apachekafka)](https://kafka.apache.org/)
+[![Redis](https://img.shields.io/badge/Redis-Caching_&_Locks-red.svg?style=flat-square&logo=redis)](https://redis.io/)
+[![Razorpay Integration](https://img.shields.io/badge/Razorpay-Payment_Gateway-blueviolet.svg?style=flat-square&logo=razorpay)](https://razorpay.com/)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
 
----
+**INVOICELY** is an enterprise-grade, high-performance, event-driven SaaS backend for automated invoicing, client billing, payment tracking, automated payment reminders, PDF generation, Razorpay gateway webhooks, and sub-millisecond real-time analytics.
 
-## 🚀 Key Features & Architecture
-
-### 1. Core Domain Entities & Persistence
-- **Framework:** Spring Boot 3 / Java 21 with Spring Data JPA & PostgreSQL
-- **Entities & Lifecycle States:**
-  - `Business` — Business profiles & GST settings
-  - `Customer` — Multi-tenant client records scoped to specific businesses
-  - `Invoice` — Invoice metadata, dynamic total calculation, and status lifecycle (`DRAFT`, `ISSUED`, `PARTIALLY_PAID`, `PAID`, `OVERDUE`, `VOID`)
-  - `InvoiceItem` — Line items per invoice
-
-### 2. Authentication & Security
-- **Spring Security & Stateless JWT:** Custom `JwtService` and `JwtAuthenticationFilter`
-- **Google OAuth 2.0 Integration:** Verification of Google ID Tokens via `AuthService`
-- **Auth & Business Endpoints:**
-  - `POST /api/v1/auth/google` — Google OAuth Sign-In / Sign-Up
-  - `GET /api/v1/auth/dev-token` — Dev token generator endpoint for rapid API testing
-  - `POST /api/v1/businesses` — Register business profile
-  - `GET /api/v1/businesses/me` — Fetch authenticated business profile
-
-### 3. Public Interactive Web View & PDF Generation
-- **Thymeleaf HTML Views:** Responsive, clean public web invoice (`public-invoice.html`) accessible via `GET /api/v1/public/invoices/{id}` with a live **Pay Now with Razorpay** CTA button.
-- **Flying Saucer PDF Generator:** Converts HTML templates into formatted PDF documents on-the-fly (`PdfService`).
-
-### 4. Asynchronous Event-Driven Architecture & Email Notifications
-- **Kafka Producer & Consumer:** `InvoiceProducer` emits `InvoiceCreatedEvent` when an invoice is issued.
-- **Background Email Worker (`InvoiceConsumer`):** Asynchronously generates the PDF invoice attachment and dispatches an automated email to the customer using `Spring Mail` & Gmail SMTP without blocking API response times.
-
-### 5. Razorpay Payment Gateway & Automated Webhooks
-- **Dynamic Payment Links (`RazorpayService`):**
-  - Auto-converts Rupee totals into Paise for precision math.
-  - Passes custom notes containing `invoiceId` for seamless tracking.
-  - Automatically sets link expiry matching invoice due dates.
-  - Generated dynamically on public invoice views (`paymentUrl`).
-- **Real-Time Webhook Processing (`WebhookController`):**
-  - Endpoint: `POST /api/v1/webhooks/razorpay` (Public / Unauthenticated for Razorpay callbacks).
-  - Cryptographic HMAC-SHA256 signature verification via Razorpay SDK (`Utils.verifyWebhookSignature`).
-  - Supports `payment.captured`, `order.paid`, and `payment_link.paid` events.
-  - Automatically updates invoice status to `PAID`.
-  - Evicts stale Redis dashboard summary cache so real-time metrics update instantly.
-
-### 6. High-Performance Caching & Distributed Locking (Redis)
-- **Spring Data Redis & Cache Management:** Configured `RedisCacheManager` with a 10-minute TTL and modern non-deprecated JSON serialization (`RedisSerializer.json()`).
-- **Dashboard Summary Caching:** `@Cacheable(value = "dashboard_summary", key = "#userEmail")` speeds up dashboard metrics reads to sub-millisecond speeds.
-- **Cache Eviction Strategy:** `@CacheEvict` automatically invalidates stale dashboard cache entries upon new invoice creation or Razorpay webhook settlement.
-- **Distributed Concurrency Locks:** `DistributedLockService` using Redis atomic `SETNX` operations with TTL to prevent race conditions across distributed backend instances.
+Built with **Java 21**, **Spring Boot 3**, **Apache Kafka**, **Redis**, and **PostgreSQL**, INVOICELY demonstrates modern backend architecture patterns including event-driven microservices, distributed locking, reactive caching strategies, and secure OAuth2 / JWT authentication.
 
 ---
 
-## 🛠️ Setup & Running Locally
+## 💡 System Architecture
+
+```mermaid
+flowchart TD
+    Client[Client / Mobile / Web App] -->|OAuth2 / JWT Bearer| API[Spring Boot REST API Controllers]
+    API -->|Read / Write| Postgres[(PostgreSQL 15)]
+    API -->|Cache Read / Invalidate| Redis[(Redis Cache & Distributed Locks)]
+    
+    API -->|Emit Invoice & Reminder Events| Kafka{Apache Kafka Event Bus}
+    
+    subgraph Asynchronous Event Workers
+        Kafka -->|InvoiceCreatedEvent| PDFWorker[Flying Saucer PDF Engine]
+        PDFWorker -->|Attach Invoice PDF| MailWorker[Spring Mailer / SMTP]
+        MailWorker -->|Deliver Email| Customer[Client / Customer Inbox]
+        
+        Kafka -->|PaymentReminderEvent| ReminderWorker[Payment Reminder Worker]
+        ReminderWorker -->|Deliver Payment Link Email| Customer
+    end
+
+    subgraph Razorpay Settlement Pipeline
+        Customer -->|Click Web View / Payment Link| Razorpay[Razorpay Payment Gateway]
+        Razorpay -->|HMAC-SHA256 Webhook| WebhookCtrl[Razorpay Webhook Controller]
+        WebhookCtrl -->|Update Invoice Status to PAID| Postgres
+        WebhookCtrl -->|Evict Stale Cache| Redis
+    end
+```
+
+---
+
+## 🔥 Key Technical Highlights & Features
+
+### 1. 🛡️ Authentication & Multi-Tenant Security
+- **Stateless JWT Security Filter Chain**: Custom `JwtAuthenticationFilter` and `JwtService` validating signed JWT tokens on protected endpoints.
+- **Google OAuth 2.0 Integration**: Seamless authentication verified using `com.google.api-client`.
+- **Tenant Isolation**: Customer data and financial records strictly scoped by `business_id`.
+
+### 2. ⚡ High-Performance Caching & Distributed Locks (Redis)
+- **Sub-Millisecond Dashboard Reads**: `@Cacheable(value = "dashboard_summary", key = "#userEmail")` caches key metrics in Redis with a 10-minute TTL.
+- **Automated Cache Invalidation**: `@CacheEvict` purges stale dashboard metrics immediately upon invoice creation or payment settlement.
+- **Concurrency Control**: Custom `DistributedLockService` using Redis atomic `SETNX` commands to prevent race conditions across distributed server instances.
+
+### 3. 📩 Event-Driven Architecture (Apache Kafka) & Async Workers
+- **Event Bus Decoupling**: High-throughput Kafka topics (`invoice-created-topic`, `payment-reminders`).
+- **Asynchronous PDF Generation**: Flying Saucer XML/HTML rendering engine generates crisp PDF invoices on-the-fly without blocking main HTTP threads.
+- **Asynchronous Mail Delivery**: Spring Mailer dispatches formatted HTML emails with PDF attachments via background Kafka consumers.
+- **Automated Payment Reminders**: Spring `@Scheduled` cron job (`InvoiceReminderScheduler`) queries pending/overdue invoices daily and triggers Kafka reminder workflows.
+
+### 4. 💳 Razorpay Payment Gateway & Webhook Engine
+- **Dynamic Payment Links**: `RazorpayService` auto-generates Razorpay payment links matching exact invoice due dates and Rupee-to-Paise precision math.
+- **Webhook Cryptographic Verification**: `WebhookController` verifies incoming HMAC-SHA256 signatures via Razorpay SDK (`Utils.verifyWebhookSignature`).
+- **Automated Settlement**: Automatically updates invoice lifecycle (`ISSUED` → `PAID`) and invalidates cache metrics upon payment confirmation.
+
+### 5. 📄 Spring Data JPA Pagination & Financial Reports
+- **Efficient Pagination & Sorting**: `Page<Invoice> findByBusinessId(UUID businessId, Pageable pageable)` with default page sizes and creation date sorting (`createdAt DESC`).
+- **CSV Data Export**: `ReportService` exports complete business invoice summaries into CSV format.
+
+---
+
+## 🛠️ Tech Stack & Dependencies
+
+| Layer | Technology |
+| :--- | :--- |
+| **Language & Runtime** | Java 21 (OpenJDK) |
+| **Core Framework** | Spring Boot 3.4, Spring Data JPA, Spring Security, Spring MVC |
+| **Database** | PostgreSQL 15 (Relational persistence) |
+| **Caching & Locking** | Redis (Spring Data Redis, Jedis/Lettuce, Custom Distributed Locks) |
+| **Message Broker** | Apache Kafka (Spring Kafka Producers & Consumers) |
+| **Payment Gateway** | Razorpay Java SDK (`com.razorpay:razorpay-java`) |
+| **PDF & Email** | Flying Saucer (`flying-saucer-pdf`), Thymeleaf, Spring Mail |
+| **Testing** | JUnit 5, Mockito, Spring Boot Test |
+| **Containerization** | Docker, Docker Compose |
+
+---
+
+## 🚀 Quick Start Guide
 
 ### Prerequisites
-- **Java 21** / OpenJDK 21
-- **Docker & Docker Desktop** (for Kafka and Redis)
-- **PostgreSQL 15+** (Running on port `5433` by default)
-- **Maven 3.8+** (or included `./mvnw` wrapper)
-- **ngrok** (for local webhook testing)
+- **Java 21** or later
+- **Docker Desktop** (for Kafka & Redis)
+- **PostgreSQL 15+** (Listening on port `5433` by default)
+- **Maven 3.8+** (or use `./mvnw`)
 
 ---
 
-### Step 1: Start Infrastructure (Kafka & Redis Containers)
-
-Navigate to the `backend` directory and launch Kafka and Redis using Docker Compose:
+### Step 1: Clone Repository & Start Containers
 
 ```bash
-cd backend
+git clone https://github.com/VaibhavSharmaggwp/invoicely-.git
+cd invoicely-/backend
+
+# Start Redis & Kafka Docker containers
 docker-compose up -d
 ```
 
 ---
 
-### Step 2: Environment Configuration
+### Step 2: Configure Environment Variables
 
-Create a `.env` file in the project root directory (or update `application-local.yml`). 
-> **Note:** `.env` and `application-local.yml` are ignored by `.gitignore` to keep credentials completely safe.
-
-Use `.env.example` as a template:
+Create a `.env` file in the project root (use `.env.example` as a starting template):
 
 ```env
 # Database & Infrastructure
@@ -90,101 +123,63 @@ KAFKA_BOOTSTRAP_SERVERS=localhost:9092
 REDIS_HOST=localhost
 REDIS_PORT=6379
 
-# Google Auth
+# Authentication & Payment Integration
 GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
-
-# Razorpay Integration (Test/Dev Mode)
 RAZORPAY_KEY_ID=your_razorpay_key_id
 RAZORPAY_KEY_SECRET=your_razorpay_key_secret
 RAZORPAY_WEBHOOK_SECRET=your_razorpay_webhook_secret
 
-# Spring Mail Configuration
+# Mail Configuration
 SPRING_MAIL_USERNAME=your_email@gmail.com
-SPRING_MAIL_PASSWORD=your_16_char_app_password
+SPRING_MAIL_PASSWORD=your_app_password
 ```
 
 ---
 
-### Step 3: Local Webhook Tunneling (ngrok)
-
-To test Razorpay webhooks locally on port `8080`:
-
-```powershell
-ngrok http 8080
-```
-Copy your forwarding HTTPS URL (e.g. `https://<hash>.ngrok-free.app`) and configure Webhook in Razorpay Dashboard:
-- **Webhook URL:** `https://<hash>.ngrok-free.app/api/v1/webhooks/razorpay`
-- **Secret:** Same value as `RAZORPAY_WEBHOOK_SECRET` in your `.env`.
-
----
-
-### Step 4: Run Backend Application
+### Step 3: Run Backend & Execute Tests
 
 ```bash
-cd backend
+# Run Unit & Integration Tests
+./mvnw test
+
+# Launch Spring Boot Application
 ./mvnw spring-boot:run
 ```
 
----
-
-## 🧪 Testing Endpoints with Postman
-
-1. **Obtain Dev JWT Token:**
-   ```http
-   GET http://localhost:8080/api/v1/auth/dev-token?email=test@invoicely.com
-   ```
-
-2. **Fetch Cached Dashboard Summary:**
-   ```http
-   GET http://localhost:8080/api/v1/invoices/dashboard-summary
-   Authorization: Bearer <YOUR_JWT_TOKEN>
-   ```
-
-3. **Create Invoice (Triggers Asynchronous Kafka Event, Generates PDF & Invalidates Cache):**
-   ```http
-   POST http://localhost:8080/api/v1/invoices
-   Authorization: Bearer <YOUR_JWT_TOKEN>
-   Content-Type: application/json
-
-   {
-     "customerId": "<YOUR_CUSTOMER_UUID>",
-     "issueDate": "2026-09-01",
-     "dueDate": "2026-09-15",
-     "items": [
-       {
-         "description": "Full-Stack Development Project",
-         "quantity": 1,
-         "unitPrice": 5000.00
-       }
-     ]
-   }
-   ```
-
-4. **View Public Invoice Webpage with Razorpay Payment Button (No JWT Required):**
-   ```http
-   GET http://localhost:8080/api/v1/public/invoices/<INVOICE_UUID>
-   ```
+The application starts on `http://localhost:8080`.
 
 ---
 
-## 📂 Repository Structure
+## 📌 REST API Endpoint Reference
 
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/v1/auth/google` | Public | Google OAuth 2.0 Sign-In / Sign-Up |
+| `GET` | `/api/v1/auth/dev-token` | Dev/Public | Generate dev JWT token for testing |
+| `POST` | `/api/v1/businesses` | Authenticated | Register business profile |
+| `GET` | `/api/v1/businesses/me` | Authenticated | Fetch current business profile |
+| `POST` | `/api/v1/invoices` | Authenticated | Create invoice & emit Kafka event |
+| `GET` | `/api/v1/invoices` | Authenticated | List all invoices for business |
+| `GET` | `/api/v1/invoices?page=0&size=10` | Authenticated | Paginated & sorted invoice list |
+| `GET` | `/api/v1/invoices/dashboard-summary` | Authenticated | Cached dashboard financial metrics |
+| `GET` | `/api/v1/public/invoices/{id}` | Public | Public interactive invoice view with Razorpay CTA |
+| `POST` | `/api/v1/webhooks/razorpay` | Public (HMAC Verified) | Razorpay webhook callback endpoint |
+
+---
+
+## 🧪 Testing & Quality Assurance
+
+Comprehensive unit testing using **JUnit 5** and **Mockito** covers core domain logic, service layers, and pagination boundaries.
+
+To execute the test suite:
+```bash
+./mvnw test
 ```
-INVOICELY/
-├── .env.example                 # Environment configuration template
-├── .gitignore                   # Git rules ignoring secrets (.env, local yml)
-├── backend/
-│   ├── docker-compose.yml       # Docker configuration for Kafka & Redis
-│   ├── pom.xml                  # Maven dependencies (Spring Boot, Razorpay, Kafka, Redis, Mail, Thymeleaf, Flying-Saucer)
-│   └── src/
-│       └── main/
-│           ├── java/com/invoicely/backend/
-│           │   ├── config/      # Redis, Security & Razorpay Configurations
-│           │   ├── controller/  # REST Endpoints (Auth, Invoice, PublicInvoice, WebhookController)
-│           │   ├── dto/         # Request & Response Data Transfer Objects
-│           │   ├── entity/      # JPA Entities
-│           │   ├── repository/  # Data Access Interfaces
-│           │   └── Service/     # InvoiceService, PaymentService, RazorpayService, EmailService & PdfService
-│           └── resources/       # Application properties, Thymeleaf HTML templates
-└── README.md                    # Project documentation
-```
+
+---
+
+## 📝 License
+
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+
+Developed with ❤️ by [Vaibhav Sharma](https://github.com/VaibhavSharmaggwp).
