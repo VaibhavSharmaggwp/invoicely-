@@ -17,11 +17,15 @@ import com.invoicely.backend.repository.CustomerRepository;
 import com.invoicely.backend.repository.InvoiceRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -202,5 +206,20 @@ public class InvoiceService {
                 .items(publistItem)
                 .build();
 
+    }
+
+    public Page<Invoice> getInvoicesForBusiness(UUID businessId, int pageNumber, int pageSize){
+        // 1. PageRequest banate hain (Page 0 se start hota hai)
+        // Hum unko latest pehle dikhana chahte hain, isliye Sort by createdAt DESC
+        Pageable pageable = PageRequest.of(pageNumber, pageSize, Sort.by("createdAt").descending());
+        // 2. Database se sirf us specific page ka data nikalte hain
+        return invoiceRepository.findByBusinessId(businessId, pageable);
+
+    }
+
+    public Page<Invoice> getInvoicesForUser(String userEmail, int pageNumber, int pageSize){
+        Business business = businessRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("Business not found"));
+        return getInvoicesForBusiness(business.getId(), pageNumber, pageSize);
     }
 }

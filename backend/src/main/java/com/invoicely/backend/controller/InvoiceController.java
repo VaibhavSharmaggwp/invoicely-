@@ -3,8 +3,10 @@ package com.invoicely.backend.controller;
 import com.invoicely.backend.Service.InvoiceService;
 import com.invoicely.backend.dto.InvoiceRequestDTO;
 import com.invoicely.backend.dto.InvoiceResponseDTO;
+import com.invoicely.backend.entity.Invoice;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -54,6 +56,17 @@ public class InvoiceController {
 
         com.invoicely.backend.dto.DashboardSummaryDTO summary = invoiceService.getDashboardSummary(userEmail);
         return ResponseEntity.ok(summary);
+    }
+
+    @GetMapping(params = {"page", "size"})
+    public ResponseEntity<Page<Invoice>> getAllInvoices(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ){
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userEmail = authentication.getName();
+        Page<Invoice> invoicePage = invoiceService.getInvoicesForUser(userEmail, page, size);
+        return ResponseEntity.ok(invoicePage);
     }
 
 }
