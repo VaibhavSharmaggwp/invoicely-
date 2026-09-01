@@ -49,4 +49,30 @@ public class NotificationConsumer {
             e.printStackTrace();
         }
     }
+
+    // Yeh naya listener sirf reminders wale topic ko sune-ga
+    @KafkaListener(topics = "invoice-reminders", groupId = "invoicely-notification-group")
+    public void consumeReminderEvent(String eventJson){
+        try{
+            // JSON string ko wapas PaymentReminderEvent object mein convert karo
+            com.invoicely.backend.event.PaymentReminderEvent event =
+                    objectMapper.readValue(eventJson, com.invoicely.backend.event.PaymentReminderEvent.class);
+            System.out.println("Kafka Consumer: Picked up "
+                    + event.getReminderType() + " reminder for " + event.getInvoiceNumber() + ". Sending email...");
+
+            // Apni email service ko call karo
+            pdfEmailService.sendReminderEmail(
+                    event.getCustomerEmail(),
+                    event.getCustomerName(),
+                    event.getInvoiceNumber(),
+                    event.getTotalAmount().toString(),
+                    event.getInvoiceId().toString(),
+                    event.getReminderType()
+            );
+
+        } catch (Exception e) {
+            System.err.println("❌ Consumer Error: Failed to process reminder event");
+        e.printStackTrace();
+        }
+    }
 }

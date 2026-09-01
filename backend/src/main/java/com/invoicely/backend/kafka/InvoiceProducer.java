@@ -1,6 +1,7 @@
 package com.invoicely.backend.kafka;
 
 import com.invoicely.backend.event.InvoiceCreatedEvent;
+import com.invoicely.backend.event.PaymentReminderEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
@@ -16,6 +17,9 @@ public class InvoiceProducer {
     // Yeh hamare Kafka topic ka naam hai
     private static final String TOPIC = "invoice-events";
 
+    private static final String REMINDER_TOPIC = "invoice-reminders"; // new Topic
+
+
     public void sendInvoiceCreatedEvent(InvoiceCreatedEvent event){
         try{
             // 1. Java object ko JSON text mein badlo
@@ -26,6 +30,18 @@ public class InvoiceProducer {
             System.out.println("Producer: Invoice event sent to Kafka -> " + event.getInvoiceNumber());
         }catch (Exception e){
             System.err.println("Producer Error: Failed to send event to Kafka");
+            e.printStackTrace();
+        }
+    }
+
+    public void sendReminderEvent(com.invoicely.backend.event.PaymentReminderEvent event) {
+        try {
+            String eventJson = objectMapper.writeValueAsString(event);
+            kafkaTemplate.send(REMINDER_TOPIC, eventJson);
+
+            System.out.println("Producer: Reminder ticket sent to Kafka for -> " + event.getInvoiceNumber());
+        } catch (Exception e) {
+            System.err.println("❌ Producer Error: Failed to send reminder event");
             e.printStackTrace();
         }
     }

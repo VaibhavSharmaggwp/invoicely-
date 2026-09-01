@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @Controller
-@RequestMapping("/api/v1/public/invoices")
+@RequestMapping("/api/v1/public/invoices")  // Cleaner URL for the customer
 @RequiredArgsConstructor
 public class PublicInvoiceController {
     private final InvoiceService invoiceService;
