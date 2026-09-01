@@ -21,7 +21,7 @@ public class InvoiceReminderScheduler {
 
     // Real world mein hum isko subah 8 baje chalayenge: cron = "0 0 8 * * *"
     // Abhi test karne ke liye har 1 minute mein chalayenge: "0 * * * * *"
-    @Scheduled(cron = "0 * * * * *")
+    @Scheduled(cron = "0 0 8 * * *")
     @org.springframework.transaction.annotation.Transactional 
     public void scanAndSendReminders() {
         System.out.println("🤖 Cron Job Woke Up: Scanning for payments...");
