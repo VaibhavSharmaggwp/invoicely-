@@ -15,27 +15,39 @@ public class ReportService {
     private final InvoiceRepository invoiceRepository;
 
     // Yeh method bas ek plain text file ko byte array banakar return karega
-    public byte[] exportInvoicesToCSV(UUID businessId) {
-        // 1. Database se saare invoices nikaalo
-        List<Invoice> invoices = invoiceRepository.findByBusinessId(businessId);
+    public byte[] exportInvoicesToCSV(UUID businessId, java.time.LocalDate startDate, java.time.LocalDate endDate) {
 
-        // 2. StringBuilder use karenge kyunki humein bohot saari strings jodni hain
+        // 1. Database se selected dates ke invoices nikaalo (or all if dates not provided)
+        List<Invoice> invoices;
+        if (startDate != null && endDate != null) {
+            invoices = invoiceRepository.findByBusinessIdAndIssueDateBetween(businessId, startDate, endDate);
+        } else {
+            invoices = invoiceRepository.findByBusinessId(businessId);
+        }
+
         StringBuilder csvContent = new StringBuilder();
 
-        // 3. Header Row (Excel ke column names)
-        csvContent.append("Invoice Number, Customer Name, Issue Date, Due Date, Total, Amount, Status\n");
+        // 2. Header Row
+        csvContent.append("Invoice Number,Customer Name,Issue Date,Due Date,Total Amount,Status\n");
 
-        // 4. Data Rows (Har invoice ka data comma se separate karke add karo)
-
+        // 3. Data Rows with "Comma Bug" fix & null safety
         for (Invoice inv : invoices) {
-            csvContent.append(inv.getInvoiceNumber()).append(",")
-                    .append(inv.getCustomer().getName()).append(",")
+            String invoiceNumber = inv.getInvoiceNumber() != null ? inv.getInvoiceNumber() : "";
+            String customerName = (inv.getCustomer() != null && inv.getCustomer().getName() != null)
+                    ? inv.getCustomer().getName()
+                    : "N/A";
+            String status = inv.getStatus() != null ? inv.getStatus().name() : "";
+
+            // Text fields ke aaspas escaped quotes (\") lagaye hain.
+            // Agar customer ka naam "Sharma, Inc." hai, toh CSV break nahi hoga.
+            csvContent.append("\"").append(invoiceNumber).append("\",")
+                    .append("\"").append(customerName).append("\",")
                     .append(inv.getIssueDate()).append(",")
                     .append(inv.getDueDate()).append(",")
                     .append(inv.getTotalAmount()).append(",")
-                    .append(inv.getStatus().name()).append("\n"); // \n matlab next row
+                    .append("\"").append(status).append("\"\n");
         }
-        // 5. String ko byte[] mein convert karo taaki user download kar sake
+
         return csvContent.toString().getBytes();
     }
 }

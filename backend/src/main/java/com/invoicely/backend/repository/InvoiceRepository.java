@@ -20,6 +20,9 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
     // Sirf wahi invoices lao jinka status 'ISSUED' (unpaid) hai aur due date exactly match karti hai
     List<Invoice> findByStatusAndDueDate(com.invoicely.backend.enums.InvoiceStatus status, java.time.LocalDate dueDate);
 
+    // Date range filter for reports
+    List<Invoice> findByBusinessIdAndIssueDateBetween(UUID businessId, java.time.LocalDate startDate, java.time.LocalDate endDate);
+
     // List<Invoice> ki jagah hum Page<Invoice> return karenge
     // Aur last mein Pageable object pass karenge
     Page<Invoice> findByBusinessId(UUID businessId, Pageable pageable);
