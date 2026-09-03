@@ -35,48 +35,40 @@ public class WebhookController {
             }
 
             // 2. Parse JSON payload from Razorpay
-            JSONObject root = new JSONObject(rawPayload);
-            String event = root.optString("event");
+            JSONObject jsonPayload = new JSONObject(rawPayload);
+            String event = jsonPayload.optString("event");
 
             System.out.println("✅ Signature Verified. Received Razorpay Event: " + event);
 
-            // 3. Process captured payment / paid link
-            if ("payment.captured".equals(event) || "order.paid".equals(event) || "payment_link.paid".equals(event)) {
-                JSONObject payload = root.optJSONObject("payload");
-                if (payload != null) {
-                    JSONObject entity = null;
-                    if (payload.has("payment_link")) {
-                        entity = payload.getJSONObject("payment_link").getJSONObject("entity");
-                    } else if (payload.has("payment")) {
-                        entity = payload.getJSONObject("payment").getJSONObject("entity");
-                    } else if (payload.has("order")) {
-                        entity = payload.getJSONObject("order").getJSONObject("entity");
-                    }
+            // 3. Only process if the payment was actually captured
+            if ("payment.captured".equals(event)) {
+                JSONObject paymentEntity = jsonPayload.getJSONObject("payload")
+                                                      .getJSONObject("payment")
+                                                      .getJSONObject("entity");
+                
+                // Extract the notes we sent when creating the link
+                JSONObject notes = paymentEntity.getJSONObject("notes");
+                String invoiceIdStr = notes.has("invoice_id") ? notes.getString("invoice_id") : notes.getString("invoiceId");
+                
+                // 🚀 NEW: Extract the amount and convert Paise to Rupees
+                long amountInPaise = paymentEntity.getLong("amount");
+                java.math.BigDecimal amountInRupees = new java.math.BigDecimal(amountInPaise)
+                                                            .divide(new java.math.BigDecimal("100"));
+                
+                // 4. Map it to your DTO
+                PaymentWebhookDTO dto = new PaymentWebhookDTO();
+                dto.setInvoiceId(UUID.fromString(invoiceIdStr));
+                dto.setPaymentId(paymentEntity.getString("id"));
+                dto.setStatus("SUCCESS"); 
+                dto.setAmountPaid(amountInRupees); // <-- Pass the correct amount here!
 
-                    if (entity != null) {
-                        String paymentId = entity.optString("id");
-                        String status = "SUCCESS";
-
-                        JSONObject notes = entity.optJSONObject("notes");
-                        String invoiceIdStr = notes != null ? notes.optString("invoiceId", notes.optString("invoice_id", null)) : null;
-
-                        if (invoiceIdStr != null && !invoiceIdStr.isEmpty() && !"null".equalsIgnoreCase(invoiceIdStr)) {
-                            PaymentWebhookDTO webhookDTO = new PaymentWebhookDTO();
-                            webhookDTO.setInvoiceId(UUID.fromString(invoiceIdStr));
-                            webhookDTO.setPaymentId(paymentId);
-                            webhookDTO.setStatus(status);
-
-                            paymentService.processPaymentWebhook(webhookDTO);
-                        } else {
-                            System.out.println("⚠️ Webhook received but no invoiceId found in entity notes.");
-                        }
-                    }
-                }
+                // 5. Hand it off to your perfectly agnostic PaymentService
+                paymentService.processPaymentWebhook(dto);
             }
 
             return ResponseEntity.ok("Webhook processed successfully");
         } catch (Exception e) {
-            System.err.println("❌ Webhook processing error: " + e.getMessage());
+            System.err.println("Webhook processing error: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Webhook Error: " + e.getMessage());
         }
     }

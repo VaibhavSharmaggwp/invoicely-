@@ -113,6 +113,13 @@
 			<version>9.4.0</version>
 		</dependency>
 
+		<!-- Bucket4j: Rate limiting ke liye -->
+		<dependency>
+			<groupId>com.bucket4j</groupId>
+			<artifactId>bucket4j-core</artifactId>
+			<version>8.3.0</version>
+		</dependency>
+
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
