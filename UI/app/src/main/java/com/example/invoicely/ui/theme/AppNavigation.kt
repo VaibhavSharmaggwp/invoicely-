@@ -1,41 +1,50 @@
 package com.example.invoicely.ui.theme
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.invoicely.security.TokenManager
+import com.example.invoicely.viewmodel.AuthViewModel
+import com.example.invoicely.viewmodel.AuthViewModelFactory
 
 @Composable
 fun AppNavigation() {
-    // 1. The Controller: Yeh navigation manage karega
     val navController = rememberNavController()
 
-    // 2. The Host: App starts at "splash"
     NavHost(navController = navController, startDestination = "splash") {
 
-        // Route 1: Splash Screen
         composable("splash") {
             SplashScreen(onAnimationFinished = {
-                // Splash khatam hone par "auth" par jao
                 navController.navigate("auth") {
-                    // "splash" ko back history se hata do
                     popUpTo("splash") { inclusive = true }
                 }
             })
         }
 
-        // Route 2: Authentication Screen (Login / Sign Up)
         composable("auth") {
-            AuthScreen(onAuthSuccess = {
-                // Login success hone par "main" par jao
-                navController.navigate("main") {
-                    // "auth" ko back history se hata do
-                    popUpTo("auth") { inclusive = true }
+            // 1. Android Context nikaalo (SharedPreferences ke liye zaroori hai)
+            val context = LocalContext.current
+
+            // 2. TokenManager aur Factory ko instantiate karo (remember use karke taaki screen rotate hone par destroy na ho)
+            val tokenManager = remember { TokenManager(context) }
+            val factory = remember { AuthViewModelFactory(tokenManager) }
+
+            // 3. Apni factory pass karke ViewModel generate karo
+            val authViewModel: AuthViewModel = viewModel(factory = factory)
+
+            // 4. AuthScreen ko ViewModel pass karo
+            AuthScreen(
+                viewModel = authViewModel,
+                onAuthSuccess = {
+                    navController.navigate("main")
                 }
-            })
+            )
         }
 
-        // Route 3: The Main Dashboard Shell
         composable("main") {
             MainScaffold()
         }

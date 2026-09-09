@@ -19,6 +19,18 @@ public class AuthController {
     private final BusinessRepository businessRepository;
     private final JwtService jwtService;
 
+    @PostMapping("/register")
+    public ResponseEntity<AuthResponseDTO> register(@RequestBody AuthRequestDTO requestDTO) {
+        AuthResponseDTO response = authService.register(requestDTO);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<AuthResponseDTO> login(@RequestBody AuthRequestDTO requestDTO) {
+        AuthResponseDTO response = authService.login(requestDTO);
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping("/google")
     public ResponseEntity<AuthResponseDTO> googleLogin(@Valid @RequestBody AuthRequestDTO requestDTO){
         // Android yahan Google ka token bhejega

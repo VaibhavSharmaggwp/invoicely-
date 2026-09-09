@@ -53,13 +53,16 @@ dependencies {
 
     // Retrofit & OkHttp
     implementation(libs.retrofit)
-    implementation(libs.retrofit.converter.gson)
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging.interceptor)
 
     // Lottie animation
     implementation("com.airbnb.android:lottie-compose:6.4.0")
     implementation(libs.androidx.navigation.compose)
+
+    // Yeh Google ki official security library hai jo encryption handle karti hai
+    implementation("androidx.security:security-crypto-ktx:1.1.0-alpha06")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

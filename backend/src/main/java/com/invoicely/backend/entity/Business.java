@@ -32,6 +32,7 @@ public class Business  implements UserDetails {
     @Column(nullable = false)
     private String email;
 
+    private String password;
     private String phone;
     private String gstNumber;
 
@@ -50,8 +51,7 @@ public class Business  implements UserDetails {
 
     @Override
     public String getPassword() {
-        // Hum Google Auth use karenge, so password ki zaroorat nahi hai.
-        return null;
+        return this.password;
     }
 
     @Override

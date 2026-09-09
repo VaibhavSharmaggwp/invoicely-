@@ -67,26 +67,33 @@ flowchart TD
 
 ### 1. 📱 Android UI App (`UI/`)
 - **Modern Jetpack Compose & Material 3**: Built with a custom design system utilizing bespoke brand palettes (`Chartreuse`, `Ink`, `Cleared`) and custom Google Fonts (**Outfit** & **JetBrains Mono**).
+- **Fluid Animated Auth Experience**: Smooth tab switching with `animateContentSize()` and `AnimatedVisibility`, featuring exclusive Google Sign-In on the Log In screen, native email/password/phone registration, high-contrast dark text rendering, and intuitive navigation backstack management.
 - **Network Layer**: Powered by **Retrofit 2** & **OkHttp 4** with JSON content parsing (`converter-gson`) and logging interceptors for API communication with the Spring Boot backend.
 - **Responsive Navigation**: Scaffold-based navigation system (`MainScaffold`) featuring a bottom navigation bar, floating action buttons (FAB), and smooth screen transitions.
 
 ### 2. 🛡️ Backend Authentication & Security (`backend/`)
 - **Stateless JWT Security Filter Chain**: Custom `JwtAuthenticationFilter` and `JwtService` validating signed JWT tokens on protected endpoints.
-- **Google OAuth 2.0 Integration**: Seamless authentication verified using `com.google.api-client`.
+- **Multi-Factor Auth & Google OAuth 2.0**: Supports native email/password registration with phone number persistence, along with Google OAuth 2.0 verification via `com.google.api-client`.
 - **Tenant Isolation**: Customer data and financial records strictly scoped by `business_id`.
 
-### 3. ⚡ Caching & Distributed Locks (Redis)
+---
+
+## 3. ⚡ Caching & Distributed Locks (Redis)
 - **Sub-Millisecond Dashboard Reads**: `@Cacheable(value = "dashboard_summary", key = "#userEmail")` caches key metrics in Redis with a 10-minute TTL.
 - **Automated Cache Invalidation**: `@CacheEvict` purges stale dashboard metrics immediately upon invoice creation or payment settlement.
 - **Concurrency Control**: Custom `DistributedLockService` using Redis atomic `SETNX` commands to prevent race conditions.
 
-### 4. 📩 Event-Driven Architecture (Apache Kafka) & Async Workers
+---
+
+## 4. 📩 Event-Driven Architecture (Apache Kafka) & Async Workers
 - **Event Bus Decoupling**: High-throughput Kafka topics (`invoice-created-topic`, `payment-reminders`).
 - **Asynchronous PDF Generation**: Flying Saucer XML/HTML rendering engine generates crisp PDF invoices without blocking main HTTP threads.
 - **Asynchronous Mail Delivery**: Dispatches formatted HTML emails with PDF attachments via background Kafka consumers.
 - **Automated Reminders**: Spring `@Scheduled` cron job queries pending/overdue invoices daily and triggers Kafka workflows.
 
-### 5. 💳 Razorpay Payment Gateway & Webhook Engine
+---
+
+## 5. 💳 Razorpay Payment Gateway & Webhook Engine
 - **Dynamic Payment Links**: `RazorpayService` auto-generates payment links with Rupee-to-Paise precision math.
 - **Webhook HMAC Verification**: `WebhookController` verifies incoming signatures via Razorpay SDK (`Utils.verifyWebhookSignature`).
 - **Automated Settlement**: Updates invoice lifecycle (`ISSUED` → `PAID`) and invalidates cache metrics upon payment confirmation.
@@ -168,7 +175,7 @@ cd UI
 ```
 
 - Open the `UI/` directory in Android Studio.
-- Run on an Android Emulator or physical device. (Note: For local emulator communication with Spring Boot backend, set base URL to `http://10.0.2.2:8080/`).
+- Run on an Android Emulator or physical device.
 
 ---
 
@@ -176,6 +183,8 @@ cd UI
 
 | Method | Endpoint | Access | Description |
 | :--- | :--- | :--- | :--- |
+| `POST` | `/api/v1/auth/register` | Public | Native Business Sign-Up (Name, Email, Password, Phone) |
+| `POST` | `/api/v1/auth/login` | Public | Native Business Log In (Email, Password) |
 | `POST` | `/api/v1/auth/google` | Public | Google OAuth 2.0 Sign-In / Sign-Up |
 | `GET` | `/api/v1/auth/dev-token` | Dev/Public | Generate dev JWT token for testing |
 | `POST` | `/api/v1/businesses` | Authenticated | Register business profile |
@@ -194,4 +203,3 @@ cd UI
 This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
 
 Developed with ❤️ by [Vaibhav Sharma](https://github.com/VaibhavSharmaggwp).
-

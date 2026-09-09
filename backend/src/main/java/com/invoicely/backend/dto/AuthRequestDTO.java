@@ -1,10 +1,18 @@
 package com.invoicely.backend.dto;
 
-import jakarta.validation.constraints.NotBlank;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class AuthRequestDTO {
-    @NotBlank(message = "Google ID Token is required")
-    private String googleIdToken; // Frontend yeh token bhejega
+    private String googleIdToken;
+    private String email;
+    private String password;
+    private String businessName;
+    private String phone;
 }
