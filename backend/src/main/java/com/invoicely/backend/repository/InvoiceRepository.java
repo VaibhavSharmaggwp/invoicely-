@@ -26,4 +26,8 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
     // List<Invoice> ki jagah hum Page<Invoice> return karenge
     // Aur last mein Pageable object pass karenge
     Page<Invoice> findByBusinessId(UUID businessId, Pageable pageable);
+
+    // Yeh query database ko bolegi: Is business ki saari invoices lao,
+    // naye se purane (DESC) order me sort karo, aur sirf top 5 do.
+    List<Invoice> findTop5ByBusinessIdOrderByIssueDateDesc(java.util.UUID businessId);
 }

@@ -69,7 +69,7 @@ flowchart TD
 - **Modern Jetpack Compose & Material 3**: Built with a custom design system utilizing bespoke brand palettes (`Chartreuse`, `Ink`, `Cleared`) and custom Google Fonts (**Outfit** & **JetBrains Mono**).
 - **Fluid Animated Auth Experience**: Smooth tab switching with `animateContentSize()` and `AnimatedVisibility`, featuring exclusive Google Sign-In on the Log In screen, native email/password/phone registration, high-contrast dark text rendering, and intuitive navigation backstack management.
 - **Network Layer**: Powered by **Retrofit 2** & **OkHttp 4** with JSON content parsing (`converter-gson`) and logging interceptors for API communication with the Spring Boot backend.
-- **Responsive Navigation**: Scaffold-based navigation system (`MainScaffold`) featuring a bottom navigation bar, floating action buttons (FAB), and smooth screen transitions.
+- **Responsive Navigation & Bento Dashboard**: Scaffold-based navigation system (`MainScaffold`) and MVI state architecture (`DashboardUiState`) featuring sealed states (`Loading`, `Success`, `Empty`, `Error`) binding live financial summaries and recent invoices to Jetpack Compose.
 
 ### 2. 🛡️ Backend Authentication & Security (`backend/`)
 - **Stateless JWT Security Filter Chain**: Custom `JwtAuthenticationFilter` and `JwtService` validating signed JWT tokens on protected endpoints.
@@ -79,8 +79,8 @@ flowchart TD
 ---
 
 ## 3. ⚡ Caching & Distributed Locks (Redis)
-- **Sub-Millisecond Dashboard Reads**: `@Cacheable(value = "dashboard_summary", key = "#userEmail")` caches key metrics in Redis with a 10-minute TTL.
-- **Automated Cache Invalidation**: `@CacheEvict` purges stale dashboard metrics immediately upon invoice creation or payment settlement.
+- **Sub-Millisecond Dashboard Analytics**: `@Cacheable(value = "dashboard_summary", key = "#businessId")` caches monthly revenue math, received/outstanding counts, and top 5 recent invoices in Redis with a 10-minute TTL.
+- **Automated Cache Invalidation**: `@CacheEvict` and `PaymentService` cache eviction purge stale dashboard metrics immediately upon invoice creation or payment settlement.
 - **Concurrency Control**: Custom `DistributedLockService` using Redis atomic `SETNX` commands to prevent race conditions.
 
 ---
@@ -189,6 +189,7 @@ cd UI
 | `GET` | `/api/v1/auth/dev-token` | Dev/Public | Generate dev JWT token for testing |
 | `POST` | `/api/v1/businesses` | Authenticated | Register business profile |
 | `GET` | `/api/v1/businesses/me` | Authenticated | Fetch current business profile |
+| `GET` | `/api/v1/dashboard/summary` | Authenticated | High-performance cached Bento dashboard summary (Monthly revenue, growth %, paid/outstanding math, top 5 recent invoices) |
 | `POST` | `/api/v1/invoices` | Authenticated | Create invoice & emit Kafka event |
 | `GET` | `/api/v1/invoices` | Authenticated | List all invoices for business |
 | `GET` | `/api/v1/invoices?page=0&size=10` | Authenticated | Paginated & sorted invoice list |
