@@ -16,6 +16,8 @@ interface ApiService {
     @POST("api/v1/auth/google")
     suspend fun googleLogin(@Body request: AuthRequest): Response<AuthResponse>
 
-    @GET("api/v1/dashboard/summary")
-    suspend fun getDashboardSummary(@Header("Authorization") token: String): Response<DashboardSummaryResponse>
+    @GET("/api/v1/dashboard/summary")
+    suspend fun getDashboardSummary(
+        @Header("Authorization") authHeader: String
+    ): Response<DashboardSummaryResponse>
 }

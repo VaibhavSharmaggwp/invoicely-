@@ -7,7 +7,7 @@ import com.example.invoicely.network.DashboardSummaryResponse
 
 sealed class DashboardUiState{
     // State 1: Shimmer Loading (API call chal rahi hai)
-    object Loding: DashboardUiState()
+    object Loading: DashboardUiState()
 
     // State 2: Success (Data mil gaya, ab Bento UI draw karo)
     // Data apne andar 'DashboardSummaryResponse' hold karta hai
