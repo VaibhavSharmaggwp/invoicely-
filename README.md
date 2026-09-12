@@ -69,7 +69,14 @@ flowchart TD
 - **Modern Jetpack Compose & Material 3**: Built with a custom design system utilizing bespoke brand palettes (`Chartreuse`, `Ink`, `Cleared`) and custom Google Fonts (**Outfit** & **JetBrains Mono**).
 - **Fluid Animated Auth Experience**: Smooth tab switching with `animateContentSize()` and `AnimatedVisibility`, featuring exclusive Google Sign-In on the Log In screen, native email/password/phone registration, high-contrast dark text rendering, and intuitive navigation backstack management.
 - **Network Layer**: Powered by **Retrofit 2** & **OkHttp 4** with JSON content parsing (`converter-gson`) and logging interceptors for API communication with the Spring Boot backend.
-- **Responsive Navigation & Bento Dashboard**: Scaffold-based navigation system (`MainScaffold`) and MVI state architecture (`DashboardUiState`) featuring sealed states (`Loading`, `Success`, `Empty`, `Error`) binding live financial summaries and recent invoices to Jetpack Compose.
+- **Responsive Navigation & Bento Dashboard UI**:
+  - Scaffold-based navigation system (`MainScaffold`) and MVI state architecture (`DashboardUiState`) handling sealed states (`Loading`, `Success`, `Empty`, `Error`).
+  - **Bento Grid Architecture (`DashboardContent`)**: High-contrast, scrollable financial dashboard featuring:
+    - **HeroCard**: Ink-black card displaying current month's revenue with Indian Rupee formatting (`₹`) and dynamic growth badge (`Chartreuse`).
+    - **PairCardsRow**: Side-by-side metric cards for *Received* (with cleared invoice counters) and *Outstanding* (with due vs. late overdue color-coded tags).
+    - **QuickActionStrip**: Weighted quick-action shortcuts for *New Invoice*, *Quick Pay Link*, and *Export Report*.
+    - **Recent Invoices & Status Pills**: Dynamic list featuring customer avatars, monospace currency values, and semantic status pills (`PAID`, `ISSUED`, `OVERDUE`, `PARTIALLY_PAID`).
+    - **Shimmer Skeletons & Full-Screen Previews**: Pulsing shimmer skeleton (`DashboardLoadingSkeleton`) for loading states and full-screen device `@Preview` (`DashboardFullScreenPreview`) with mock data for instant design iteration in Android Studio.
 
 ### 2. 🛡️ Backend Authentication & Security (`backend/`)
 - **Stateless JWT Security Filter Chain**: Custom `JwtAuthenticationFilter` and `JwtService` validating signed JWT tokens on protected endpoints.
