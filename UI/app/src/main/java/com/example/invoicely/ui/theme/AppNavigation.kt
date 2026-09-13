@@ -58,6 +58,9 @@ fun AppNavigation() {
 
             // 3. Pass the UI state to your MainScaffold
             MainScaffold(
+                onNewInvoiceClick = {
+                    navController.navigate("create_invoice")
+                },
                 onLogoutClick = {
                     tokenManager.clearToken()
                     navController.navigate("auth") {
@@ -66,7 +69,23 @@ fun AppNavigation() {
                 },
                 dashboardContent = {
                     // This reads the live state (Loading, Success, etc.) and updates the UI
-                    DashboardScreen(uiState = dashboardViewModel.uiState.value)
+                    DashboardScreen(
+                        uiState = dashboardViewModel.uiState.value,
+                        onNewInvoiceClick = {
+                            navController.navigate("create_invoice")
+                        }
+                    )
+                }
+            )
+        }
+
+        composable("create_invoice") {
+            CreateInvoiceScreen(
+                onBackClick = {
+                    navController.popBackStack()
+                },
+                onSaveClick = { _, _ ->
+                    navController.popBackStack()
                 }
             )
         }

@@ -53,14 +53,20 @@ fun DashboardScreen(
                 onCreateInvoiceClick = onNewInvoiceClick
             )
             is DashboardUiState.Error -> Text("Error: ${uiState.message}", modifier = Modifier.padding(16.dp), color = Color.Red)
-            is DashboardUiState.Success -> DashboardSuccessLayout(data = uiState.data)
+            is DashboardUiState.Success -> DashboardSuccessLayout(
+                data = uiState.data,
+                onNewInvoiceClick = onNewInvoiceClick
+            )
         }
     }
 }
 
 // 🚀 Success Layout using LazyColumn
 @Composable
-fun DashboardSuccessLayout(data: DashboardSummaryResponse) {
+fun DashboardSuccessLayout(
+    data: DashboardSummaryResponse,
+    onNewInvoiceClick: () -> Unit = {}
+) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -99,7 +105,7 @@ fun DashboardSuccessLayout(data: DashboardSummaryResponse) {
                     modifier = Modifier.padding(bottom = 12.dp, start = 4.dp)
                 )
                 QuickActionStrip(
-                    onNewInvoiceClick = { /* TODO: Navigate to Invoice Wizard */ },
+                    onNewInvoiceClick = onNewInvoiceClick,
                     onQuickLinkClick = { /* TODO: Open Share Intent */ },
                     onExportClick = { /* TODO: Trigger CSV Download */ }
                 )
