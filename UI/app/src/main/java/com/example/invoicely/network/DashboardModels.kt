@@ -30,3 +30,23 @@ data class RecentInvoiceDto(
     val totalAmount: Double,   // e.g., 96400.00
     val status: String  // e.g., "Paid", "Due", "Overdue"
 )
+
+// 3. THE INVOICE PAYLOAD
+// Yeh exactly hmare UI ke inputs se match karta hai
+data class CreateInvoiceRequest(
+    val customerName: String,
+    val customerEmail: String,
+    val customerAddress: String,
+    val items: List<LineItemDto>,   // Multiple items ka array
+    val taxRate: Int,               // e.g., 0, 5, 12, 18
+    val dueDate: String,            // Formatted date string (e.g., "14 Oct, 2026")
+    val memoNotes: String           // Payment instructions
+)
+
+// 2. THE LINE ITEM DTO
+// Invoice ke andar jo multiple services hain, unka structure
+data class LineItemDto(
+    val description: String,
+    val quantity: Int,
+    val unitPrice: Double
+)

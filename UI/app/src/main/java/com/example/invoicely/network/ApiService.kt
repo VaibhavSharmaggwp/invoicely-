@@ -20,4 +20,11 @@ interface ApiService {
     suspend fun getDashboardSummary(
         @Header("Authorization") authHeader: String
     ): Response<DashboardSummaryResponse>
+
+    // Creating new invoice endpoint
+    @POST("/api/v1/invoices")
+    suspend fun createInvoice(
+        @Header("Authorization") authHeader: String,
+        @Body request: CreateInvoiceRequest
+    ): Response<Unit> // 'Unit' means hume return me koi JSON nahi chahiye, bas 200 OK status chahiye
 }
