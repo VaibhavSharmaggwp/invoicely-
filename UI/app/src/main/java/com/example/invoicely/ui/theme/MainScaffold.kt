@@ -23,18 +23,33 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.invoicely.network.DashboardSummaryResponse
+import com.example.invoicely.network.RecentInvoiceDto
+import com.example.invoicely.state.DashboardUiState
 
 @Composable
-fun MainScaffold() {
+fun MainScaffold(
+    onNewInvoiceClick: () -> Unit = {},
+    dashboardContent: @Composable () -> Unit = {
+        Text("Dashboard Content", modifier = Modifier.padding(16.dp))
+    }
+) {
     var selectedItem by remember { mutableIntStateOf(0) }
     val items = listOf("Home", "Invoices", "Reports", "Settings")
-    val icons = listOf(Icons.Filled.Home, Icons.AutoMirrored.Filled.List, Icons.AutoMirrored.Filled.List, Icons.Filled.Settings)
+    val icons = listOf(
+        Icons.Filled.Home,
+        Icons.AutoMirrored.Filled.List,
+        Icons.AutoMirrored.Filled.List,
+        Icons.Filled.Settings
+    )
 
     Scaffold(
+        containerColor = Color(0xFFF6F5EC),
         bottomBar = {
             NavigationBar(
                 containerColor = Color(0xFFF6F5EC),
@@ -57,7 +72,7 @@ fun MainScaffold() {
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { /* TODO: Open the Invoice Wizard */ },
+                onClick = onNewInvoiceClick,
                 containerColor = Chartreuse,
                 contentColor = Ink,
                 shape = CircleShape
@@ -72,18 +87,53 @@ fun MainScaffold() {
                 .padding(innerPadding)
                 .fillMaxSize()
         ) {
-            Text(
-                text = "Dashboard Content will load here",
-                modifier = Modifier.padding(16.dp)
-            )
+            when (selectedItem) {
+                0 -> dashboardContent()
+                1 -> Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("Invoices Screen", color = Ink)
+                }
+                2 -> Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("Reports Screen", color = Ink)
+                }
+                3 -> Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("Settings Screen", color = Ink)
+                }
+            }
         }
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
+@Preview(showBackground = true, backgroundColor = 0xFFF6F5EC)
 @Composable
 fun MainScaffoldPreview() {
     MaterialTheme {
-        MainScaffold()
+        MainScaffold(
+            dashboardContent = {
+                val mockData = DashboardSummaryResponse(
+                    revenueThisMonth = 384600.0,
+                    revenueGrowthPercentage = 18.4,
+                    receivedAmount = 268200.0,
+                    receivedCount = 14,
+                    outstandingAmount = 116400.0,
+                    outstandingCount = 5,
+                    overdueCount = 2,
+                    recentInvoices = listOf(
+                        RecentInvoiceDto("1", "INV-013", "Halcyon Hotels", 96400.0, "ISSUED"),
+                        RecentInvoiceDto("2", "INV-012", "Nexus Tech", 45000.0, "PAID"),
+                        RecentInvoiceDto("3", "INV-011", "Vertex Group", 12000.0, "OVERDUE")
+                    )
+                )
+                DashboardScreen(uiState = DashboardUiState.Success(mockData))
+            }
+        )
     }
 }

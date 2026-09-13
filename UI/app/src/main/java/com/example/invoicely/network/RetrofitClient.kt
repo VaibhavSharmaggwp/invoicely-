@@ -6,8 +6,8 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
-    // PC Wi-Fi IP for direct physical device access
-    private const val BASE_URL = "http://192.168.1.17:8080/"
+    // Uses adb reverse (adb reverse tcp:8080 tcp:8080) for physical phone & emulator
+    private const val BASE_URL = "http://127.0.0.1:8080/"
 
     private val okHttpClient = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)

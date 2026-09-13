@@ -10,6 +10,8 @@ import androidx.navigation.compose.rememberNavController
 import com.example.invoicely.security.TokenManager
 import com.example.invoicely.viewmodel.AuthViewModel
 import com.example.invoicely.viewmodel.AuthViewModelFactory
+import com.example.invoicely.viewmodel.DashboardViewModel
+import com.example.invoicely.viewmodel.DashboardViewModelFactory
 
 @Composable
 fun AppNavigation() {
@@ -46,7 +48,21 @@ fun AppNavigation() {
         }
 
         composable("main") {
-            MainScaffold()
+            // 1. Setup the Token Manager and Factory
+            val context = LocalContext.current
+            val tokenManager = remember { TokenManager(context) }
+            val factory = remember { DashboardViewModelFactory(tokenManager)}
+
+            // 2. Instantiate the DashboardViewModel
+            val dashboardViewModel: DashboardViewModel = viewModel(factory = factory)
+
+            // 3. Pass the UI state to your MainScaffold
+            MainScaffold(
+                dashboardContent = {
+                    // This reads the live state (Loading, Success, etc.) and updates the UI
+                    DashboardScreen(uiState = dashboardViewModel.uiState.value)
+                }
+            )
         }
     }
 }
