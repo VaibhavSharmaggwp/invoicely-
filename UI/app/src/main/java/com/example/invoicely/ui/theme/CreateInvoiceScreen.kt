@@ -36,6 +36,7 @@ import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Email
+import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Percent
 import androidx.compose.material.icons.outlined.Person
@@ -44,6 +45,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -54,11 +56,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -67,85 +68,90 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.invoicely.security.TokenManager
+import com.example.invoicely.viewmodel.CreateInvoiceViewModel
+import com.example.invoicely.viewmodel.CreateInvoiceViewModelFactory
+import com.example.invoicely.viewmodel.UiLineItem
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import java.util.UUID
-
-// Data model for line items
-data class InvoiceLineItem(
-    val id: String = UUID.randomUUID().toString(),
-    val description: String = "",
-    val quantity: String = "1",
-    val unitPrice: String = ""
-)
 
 @Composable
 fun CreateInvoiceScreen(
+    viewModel: CreateInvoiceViewModel = viewModel(
+        factory = CreateInvoiceViewModelFactory(TokenManager(LocalContext.current))
+    ),
     onBackClick: () -> Unit = {},
-    onSaveClick: (customerName: String, amount: Double) -> Unit = { _, _ -> }
+    onSaveSuccess: () -> Unit = {}
 ) {
-    val coroutineScope = rememberCoroutineScope()
+    // 1. STATE BINDING FROM VIEWMODEL
+    val customerName = viewModel.customerName.value
+    val customerEmail = viewModel.customerEmail.value
+    val customerAddress = viewModel.customerAddress.value
+    val memoNotes = viewModel.memoNotes.value
+    val items = viewModel.items
+    val selectedTaxRate = viewModel.selectedTaxRate.intValue
+    val selectedTermDays = viewModel.selectedTermDays.longValue
 
-    // 1. FORM STATE
-    var customerName by remember { mutableStateOf("") }
-    var customerEmail by remember { mutableStateOf("") }
-    var customerAddress by remember { mutableStateOf("") }
+    // Financial Metrics computed in ViewModel
+    val subtotal = viewModel.subtotal
+    val taxAmount = viewModel.taxAmount
+    val grandTotal = viewModel.grandTotal
 
-    // Multi-line items state
-    var items by remember {
-        mutableStateOf(
-            listOf(
-                InvoiceLineItem(description = "", quantity = "1", unitPrice = "")
-            )
-        )
-    }
-
-    // Taxation & Terms State
     val taxOptions = listOf(0, 5, 12, 18)
-    var selectedTaxRate by remember { mutableIntStateOf(18) } // Default: 18% GST
-    var selectedTermIndex by remember { mutableIntStateOf(2) } // Default: Net 15
-    var memoNotes by remember { mutableStateOf("") }
-
-    // Unique invoice number for this session
-    val invoiceNumber = remember { "INV-${LocalDate.now().year}-${(100..999).random()}" }
-    val todayDateFormatted = remember {
-        LocalDate.now().format(DateTimeFormatter.ofPattern("dd MMM, yyyy", Locale.US))
-    }
-
-    // Feedback Toast State
-    var toastVisible by remember { mutableStateOf(false) }
-    var toastMessage by remember { mutableStateOf("") }
-
-    // Mathematical Calculations
-    val subtotal = remember(items) {
-        items.sumOf { item ->
-            val q = item.quantity.toIntOrNull() ?: 1
-            val p = item.unitPrice.toDoubleOrNull() ?: 0.0
-            q * p
-        }
-    }
-    val taxAmount = subtotal * (selectedTaxRate / 100.0)
-    val grandTotal = subtotal + taxAmount
-
-    // Payment Terms Configuration
     val termsList = listOf(
         Pair("On Receipt", 0L),
         Pair("Net 7", 7L),
         Pair("Net 15", 15L),
         Pair("Net 30", 30L)
     )
-    val calculatedDueDate = remember(selectedTermIndex) {
-        val days = termsList[selectedTermIndex].second
-        LocalDate.now().plusDays(days).format(DateTimeFormatter.ofPattern("dd MMM, yyyy", Locale.US))
+
+    // Calculated dates
+    val todayDateFormatted = remember {
+        LocalDate.now().format(DateTimeFormatter.ofPattern("dd MMM, yyyy", Locale.US))
+    }
+    val calculatedDueDate = remember(selectedTermDays) {
+        LocalDate.now().plusDays(selectedTermDays).format(DateTimeFormatter.ofPattern("dd MMM, yyyy", Locale.US))
+    }
+    val invoiceNumber = remember { "INV-${LocalDate.now().year}-${(100..999).random()}" }
+
+    // Toast Feedback States
+    var toastVisible by remember { mutableStateOf(false) }
+    var toastMessage by remember { mutableStateOf("") }
+    var isErrorToast by remember { mutableStateOf(false) }
+
+    // Listen for Network Success
+    LaunchedEffect(viewModel.isSuccess.value) {
+        if (viewModel.isSuccess.value) {
+            isErrorToast = false
+            toastMessage = "Invoice $invoiceNumber issued successfully!"
+            toastVisible = true
+            delay(1200)
+            toastVisible = false
+            viewModel.resetState()
+            onSaveSuccess()
+        }
+    }
+
+    // Listen for Network Error
+    LaunchedEffect(viewModel.errorMessage.value) {
+        viewModel.errorMessage.value?.let { error ->
+            isErrorToast = true
+            toastMessage = error
+            toastVisible = true
+            delay(3500)
+            toastVisible = false
+            viewModel.resetState()
+        }
     }
 
     // Design System Tokens
@@ -201,17 +207,11 @@ fun CreateInvoiceScreen(
 
                     Button(
                         onClick = {
-                            if (customerName.isNotBlank() && grandTotal > 0) {
-                                coroutineScope.launch {
-                                    toastMessage = "Invoice $invoiceNumber generated successfully!"
-                                    toastVisible = true
-                                    delay(1500)
-                                    toastVisible = false
-                                    onSaveClick(customerName.trim(), grandTotal)
-                                }
+                            if (!viewModel.isLoading.value && customerName.isNotBlank() && grandTotal > 0) {
+                                viewModel.saveInvoice()
                             }
                         },
-                        enabled = customerName.isNotBlank() && grandTotal > 0,
+                        enabled = !viewModel.isLoading.value && customerName.isNotBlank() && grandTotal > 0,
                         modifier = Modifier
                             .height(54.dp)
                             .padding(start = 16.dp),
@@ -223,18 +223,26 @@ fun CreateInvoiceScreen(
                             disabledContentColor = Color.Gray
                         )
                     ) {
-                        Text(
-                            text = "Issue Invoice",
-                            fontFamily = OutfitFontFamily,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
+                        if (viewModel.isLoading.value) {
+                            CircularProgressIndicator(
+                                color = chartreuseColor,
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text(
+                                text = "Issue Invoice",
+                                fontFamily = OutfitFontFamily,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -515,6 +523,7 @@ fun CreateInvoiceScreen(
                                 )
                             }
 
+                            val selectedTermLabel = termsList.firstOrNull { it.second == selectedTermDays }?.first ?: "Net 15"
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(12.dp))
@@ -522,7 +531,7 @@ fun CreateInvoiceScreen(
                                     .padding(horizontal = 12.dp, vertical = 7.dp)
                             ) {
                                 Text(
-                                    text = termsList[selectedTermIndex].first.uppercase(),
+                                    text = selectedTermLabel.uppercase(),
                                     fontFamily = JetBrainsMonoFontFamily,
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
@@ -543,7 +552,7 @@ fun CreateInvoiceScreen(
                 ) {
                     ProfessionalInputField(
                         value = customerName,
-                        onValueChange = { customerName = it },
+                        onValueChange = { viewModel.customerName.value = it },
                         label = "CLIENT OR COMPANY NAME",
                         placeholder = "e.g. Acme Studios, Halcyon Hotels",
                         leadingIcon = Icons.Outlined.Business,
@@ -555,7 +564,7 @@ fun CreateInvoiceScreen(
 
                     ProfessionalInputField(
                         value = customerEmail,
-                        onValueChange = { customerEmail = it },
+                        onValueChange = { viewModel.customerEmail.value = it },
                         label = "BILLING EMAIL ADDRESS",
                         placeholder = "e.g. accounts@acme.com",
                         leadingIcon = Icons.Outlined.Email,
@@ -568,7 +577,7 @@ fun CreateInvoiceScreen(
 
                     ProfessionalInputField(
                         value = customerAddress,
-                        onValueChange = { customerAddress = it },
+                        onValueChange = { viewModel.customerAddress.value = it },
                         label = "BILLING LOCATION / GSTIN (OPTIONAL)",
                         placeholder = "e.g. Mumbai, MH or GSTIN 27AAAPL1234F1Z",
                         leadingIcon = Icons.Outlined.LocationOn,
@@ -620,7 +629,7 @@ fun CreateInvoiceScreen(
                                         if (items.size > 1) {
                                             IconButton(
                                                 onClick = {
-                                                    items = items.filterIndexed { i, _ -> i != index }
+                                                    viewModel.removeItem(index)
                                                 },
                                                 modifier = Modifier.size(28.dp)
                                             ) {
@@ -639,9 +648,7 @@ fun CreateInvoiceScreen(
                                     ProfessionalInputField(
                                         value = item.description,
                                         onValueChange = { newDesc ->
-                                            items = items.toMutableList().also {
-                                                it[index] = it[index].copy(description = newDesc)
-                                            }
+                                            viewModel.updateItem(index, item.copy(description = newDesc))
                                         },
                                         label = "SERVICE OR DELIVERABLE",
                                         placeholder = "e.g. Android Architecture & Kotlin Sprint",
@@ -662,9 +669,7 @@ fun CreateInvoiceScreen(
                                                 value = item.quantity,
                                                 onValueChange = { newQty ->
                                                     val filtered = newQty.filter { it.isDigit() }
-                                                    items = items.toMutableList().also {
-                                                        it[index] = it[index].copy(quantity = filtered)
-                                                    }
+                                                    viewModel.updateItem(index, item.copy(quantity = filtered))
                                                 },
                                                 label = "QTY",
                                                 placeholder = "1",
@@ -679,9 +684,7 @@ fun CreateInvoiceScreen(
                                                 value = item.unitPrice,
                                                 onValueChange = { newPrice ->
                                                     val filtered = newPrice.filter { it.isDigit() || it == '.' }
-                                                    items = items.toMutableList().also {
-                                                        it[index] = it[index].copy(unitPrice = filtered)
-                                                    }
+                                                    viewModel.updateItem(index, item.copy(unitPrice = filtered))
                                                 },
                                                 label = "UNIT RATE (₹)",
                                                 placeholder = "0.00",
@@ -719,7 +722,7 @@ fun CreateInvoiceScreen(
                         // Add Item Outlined Action
                         OutlinedButton(
                             onClick = {
-                                items = items + InvoiceLineItem()
+                                viewModel.addItem()
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -766,7 +769,7 @@ fun CreateInvoiceScreen(
                                     .weight(1f)
                                     .clip(RoundedCornerShape(14.dp))
                                     .background(if (isSelected) inkColor else chipBg)
-                                    .clickable { selectedTaxRate = rate }
+                                    .clickable { viewModel.selectedTaxRate.intValue = rate }
                                     .padding(vertical = 12.dp),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -857,8 +860,8 @@ fun CreateInvoiceScreen(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            termsList.take(2).forEachIndexed { index, (term, days) ->
-                                val isSelected = selectedTermIndex == index
+                            termsList.take(2).forEach { (term, days) ->
+                                val isSelected = selectedTermDays == days
                                 TermCard(
                                     modifier = Modifier.weight(1f),
                                     term = term,
@@ -866,7 +869,7 @@ fun CreateInvoiceScreen(
                                     isSelected = isSelected,
                                     inkColor = inkColor,
                                     chartreuseColor = chartreuseColor,
-                                    onClick = { selectedTermIndex = index }
+                                    onClick = { viewModel.selectedTermDays.longValue = days }
                                 )
                             }
                         }
@@ -875,9 +878,8 @@ fun CreateInvoiceScreen(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            termsList.drop(2).forEachIndexed { dropIdx, (term, days) ->
-                                val index = dropIdx + 2
-                                val isSelected = selectedTermIndex == index
+                            termsList.drop(2).forEach { (term, days) ->
+                                val isSelected = selectedTermDays == days
                                 TermCard(
                                     modifier = Modifier.weight(1f),
                                     term = term,
@@ -885,7 +887,7 @@ fun CreateInvoiceScreen(
                                     isSelected = isSelected,
                                     inkColor = inkColor,
                                     chartreuseColor = chartreuseColor,
-                                    onClick = { selectedTermIndex = index }
+                                    onClick = { viewModel.selectedTermDays.longValue = days }
                                 )
                             }
                         }
@@ -930,7 +932,7 @@ fun CreateInvoiceScreen(
                 ) {
                     ProfessionalInputField(
                         value = memoNotes,
-                        onValueChange = { memoNotes = it },
+                        onValueChange = { viewModel.memoNotes.value = it },
                         label = "PAYMENT INSTRUCTIONS (OPTIONAL)",
                         placeholder = "e.g. Bank: HDFC | A/C: 5010042918 | IFSC: HDFC0001234\nUPI: invoicely@okhdfcbank",
                         singleLine = false,
@@ -953,7 +955,7 @@ fun CreateInvoiceScreen(
             ) {
                 Surface(
                     shape = RoundedCornerShape(16.dp),
-                    color = inkColor,
+                    color = if (isErrorToast) Color(0xFFD32F2F) else inkColor,
                     shadowElevation = 10.dp,
                     modifier = Modifier.padding(horizontal = 20.dp)
                 ) {
@@ -962,9 +964,9 @@ fun CreateInvoiceScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            imageVector = Icons.Outlined.CheckCircle,
+                            imageVector = if (isErrorToast) Icons.Outlined.ErrorOutline else Icons.Outlined.CheckCircle,
                             contentDescription = null,
-                            tint = chartreuseColor,
+                            tint = if (isErrorToast) Color.White else chartreuseColor,
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(10.dp))
@@ -1208,7 +1210,7 @@ fun CreateInvoiceScreenPreview() {
     MaterialTheme {
         CreateInvoiceScreen(
             onBackClick = {},
-            onSaveClick = { _, _ -> }
+            onSaveSuccess = {}
         )
     }
 }

@@ -10,6 +10,8 @@ import androidx.navigation.compose.rememberNavController
 import com.example.invoicely.security.TokenManager
 import com.example.invoicely.viewmodel.AuthViewModel
 import com.example.invoicely.viewmodel.AuthViewModelFactory
+import com.example.invoicely.viewmodel.CreateInvoiceViewModel
+import com.example.invoicely.viewmodel.CreateInvoiceViewModelFactory
 import com.example.invoicely.viewmodel.DashboardViewModel
 import com.example.invoicely.viewmodel.DashboardViewModelFactory
 
@@ -80,11 +82,17 @@ fun AppNavigation() {
         }
 
         composable("create_invoice") {
+            val context = LocalContext.current
+            val tokenManager = remember { TokenManager(context) }
+            val factory = remember { CreateInvoiceViewModelFactory(tokenManager) }
+            val createInvoiceViewModel: CreateInvoiceViewModel = viewModel(factory = factory)
+
             CreateInvoiceScreen(
+                viewModel = createInvoiceViewModel,
                 onBackClick = {
                     navController.popBackStack()
                 },
-                onSaveClick = { _, _ ->
+                onSaveSuccess = {
                     navController.popBackStack()
                 }
             )
