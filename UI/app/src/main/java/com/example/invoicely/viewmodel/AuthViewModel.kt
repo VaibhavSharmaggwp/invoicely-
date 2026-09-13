@@ -18,6 +18,17 @@ class AuthViewModel(private val tokenManager: TokenManager) : ViewModel() {
     var isSuccess = mutableStateOf(false)
         private set
 
+    fun resetAuthState() {
+        isSuccess.value = false
+        errorMessage.value = null
+        isLoading.value = false
+    }
+
+    fun logout() {
+        resetAuthState()
+        tokenManager.clearToken()
+    }
+
     fun authenticate(isLoginMode: Boolean, email: String, pass: String, name: String, phone: String = "") {
         viewModelScope.launch {
             isLoading.value = true

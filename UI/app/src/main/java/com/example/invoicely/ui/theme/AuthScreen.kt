@@ -201,6 +201,12 @@ fun AuthScreen(
     var toastType by remember { mutableStateOf(ToastType.SUCCESS) }
     var isToastVisible by remember { mutableStateOf(false) }
 
+    // Reset state whenever AuthScreen is shown or revisited
+    LaunchedEffect(Unit) {
+        viewModel.resetAuthState()
+        password = ""
+    }
+
     // Trigger Error Toast on Error State Update
     LaunchedEffect(viewModel.errorMessage.value) {
         viewModel.errorMessage.value?.let { error ->
@@ -220,6 +226,7 @@ fun AuthScreen(
             isToastVisible = true
             delay(1200)
             isToastVisible = false
+            viewModel.resetAuthState()
             onAuthSuccess()
         }
     }

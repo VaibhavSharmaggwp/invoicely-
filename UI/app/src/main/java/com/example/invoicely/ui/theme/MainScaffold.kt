@@ -1,14 +1,21 @@
 package com.example.invoicely.ui.theme
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -26,8 +33,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.invoicely.network.DashboardSummaryResponse
 import com.example.invoicely.network.RecentInvoiceDto
 import com.example.invoicely.state.DashboardUiState
@@ -35,6 +44,7 @@ import com.example.invoicely.state.DashboardUiState
 @Composable
 fun MainScaffold(
     onNewInvoiceClick: () -> Unit = {},
+    onLogoutClick: () -> Unit = {},
     dashboardContent: @Composable () -> Unit = {
         Text("Dashboard Content", modifier = Modifier.padding(16.dp))
     }
@@ -101,11 +111,25 @@ fun MainScaffold(
                 ) {
                     Text("Reports Screen", color = Ink)
                 }
-                3 -> Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
+                3 -> Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ) {
-                    Text("Settings Screen", color = Ink)
+                    Text("Settings", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Ink)
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Button(
+                        onClick = onLogoutClick,
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFD32F2F),
+                            contentColor = Color.White
+                        )
+                    ) {
+                        Text("Log Out", fontWeight = FontWeight.SemiBold)
+                    }
                 }
             }
         }

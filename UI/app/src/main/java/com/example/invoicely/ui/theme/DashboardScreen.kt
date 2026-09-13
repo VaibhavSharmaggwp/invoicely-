@@ -36,7 +36,10 @@ import com.example.invoicely.network.RecentInvoiceDto
 import com.example.invoicely.state.DashboardUiState
 
 @Composable
-fun DashboardScreen(uiState: DashboardUiState) {
+fun DashboardScreen(
+    uiState: DashboardUiState,
+    onNewInvoiceClick: () -> Unit = {}
+) {
     val canvasColor = Color(0xFFF6F5EC)
 
     Box(
@@ -46,7 +49,9 @@ fun DashboardScreen(uiState: DashboardUiState) {
     ) {
         when (uiState) {
             is DashboardUiState.Loading -> DashboardLoadingSkeleton()
-            is DashboardUiState.Empty -> Text("Empty State UI will go here", modifier = Modifier.padding(16.dp))
+            is DashboardUiState.Empty -> DashboardEmptyState(
+                onCreateInvoiceClick = onNewInvoiceClick
+            )
             is DashboardUiState.Error -> Text("Error: ${uiState.message}", modifier = Modifier.padding(16.dp), color = Color.Red)
             is DashboardUiState.Success -> DashboardSuccessLayout(data = uiState.data)
         }
@@ -223,5 +228,13 @@ fun DashboardSuccessPreview() {
             )
         )
         DashboardScreen(uiState = DashboardUiState.Success(mockData))
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFFF6F5EC)
+@Composable
+fun DashboardEmptyPreview() {
+    MaterialTheme {
+        DashboardScreen(uiState = DashboardUiState.Empty)
     }
 }

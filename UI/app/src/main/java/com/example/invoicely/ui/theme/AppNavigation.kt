@@ -58,6 +58,12 @@ fun AppNavigation() {
 
             // 3. Pass the UI state to your MainScaffold
             MainScaffold(
+                onLogoutClick = {
+                    tokenManager.clearToken()
+                    navController.navigate("auth") {
+                        popUpTo("main") { inclusive = true }
+                    }
+                },
                 dashboardContent = {
                     // This reads the live state (Loading, Success, etc.) and updates the UI
                     DashboardScreen(uiState = dashboardViewModel.uiState.value)

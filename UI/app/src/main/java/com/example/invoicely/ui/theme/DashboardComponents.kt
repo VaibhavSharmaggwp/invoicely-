@@ -1,5 +1,6 @@
 package com.example.invoicely.ui.theme
 
+import com.example.invoicely.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -21,10 +22,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,12 +36,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.LottieConstants
+import com.airbnb.lottie.compose.animateLottieCompositionAsState
+import com.airbnb.lottie.compose.rememberLottieComposition
 import com.example.invoicely.network.DashboardSummaryResponse
 import com.example.invoicely.network.RecentInvoiceDto
 import java.util.Locale
+
 
 @Composable
 fun HeroCard(revenue: Double, growthPercentage: Double){
@@ -504,6 +515,85 @@ fun DashboardContent(
     }
 }
 
+
+@Composable
+fun DashboardEmptyState(onCreateInvoiceClick: () -> Unit){
+    val inkColor = Color(0xFF151A11)
+    val chartreuseColor = Color(0xFFDCEF3C)
+    val canvasColor = Color(0xFFF6F5EC)
+
+    // 1. Load the Lottie Animation
+    val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.empty_dashboard))
+
+    // 2. Animate infinitely so the screen feels "alive"
+    val progress by animateLottieCompositionAsState(
+        composition = composition,
+        iterations = LottieConstants.IterateForever
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(canvasColor)
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        // --- 1. THE ANIMATION ---
+        LottieAnimation(
+            composition = composition,
+            progress = { progress },
+            modifier = Modifier.size(240.dp)
+        )
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // --- 2. THE TYPOGRAPHY ---
+        Text(
+            text = "Your workbook is ready",
+            color = inkColor,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Text(
+            text = "There is no math to show yet. Create your first invoice to kickstart your cash flow and unlock your dashboard.",
+            color = Color.Gray,
+            fontSize = 14.sp,
+            textAlign = TextAlign.Center,
+            lineHeight = 20.sp,
+            modifier = Modifier.padding(horizontal = 16.dp)
+
+        )
+
+        Spacer(modifier = Modifier.height(48.dp))
+
+        // --- 3. THE PRIMARY ACTION ---
+        Button(
+            onClick = onCreateInvoiceClick,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = inkColor, // Dark button for premium feel
+                contentColor = chartreuseColor // Chartreuse text/icon
+            )
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Add,
+                contentDescription = "Create Invoice",
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "Create First Invoice",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+    }
+}
 @Preview(
     name = "Dashboard Full Screen",
     showBackground = true,
