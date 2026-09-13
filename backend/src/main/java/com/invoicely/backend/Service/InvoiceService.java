@@ -2,9 +2,13 @@ package com.invoicely.backend.Service;
 
 
 import com.invoicely.backend.Service.RazorpayService;
+import com.invoicely.backend.dto.CreateInvoiceRequest;
 import com.invoicely.backend.dto.InvoiceRequestDTO;
 import com.invoicely.backend.dto.InvoiceResponseDTO;
+import com.invoicely.backend.dto.LineItemDTO;
 import com.invoicely.backend.dto.PublicInvoiceDTO;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 import com.invoicely.backend.entity.Business;
 import com.invoicely.backend.entity.Customer;
 import com.invoicely.backend.entity.Invoice;
@@ -17,6 +21,7 @@ import com.invoicely.backend.repository.CustomerRepository;
 import com.invoicely.backend.repository.InvoiceRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -38,6 +43,127 @@ public class InvoiceService {
     private final RazorpayService razorpayService;
     
 
+
+    // Overloaded method using userEmail from JWT to find business and evict dashboard cache
+    @org.springframework.cache.annotation.CacheEvict(value = "dashboard_summary", key = "#userEmail")
+    @Transactional
+    public InvoiceResponseDTO createNewInvoice(String userEmail, CreateInvoiceRequest request) {
+        Business business = businessRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("Business not found"));
+        return createNewInvoice(business.getId(), request);
+    }
+
+    // @Transactional ensures ki agar item save hote waqt error aaye, toh poora invoice cancel ho jaye (Rollback)
+    @Transactional
+    public InvoiceResponseDTO createNewInvoice(UUID businessId, CreateInvoiceRequest request) {
+        // 1. Fetch the business
+        Business business = businessRepository.findById(businessId)
+                .orElseThrow(() -> new RuntimeException("Business not found"));
+
+        // 2. Fetch or create Customer entity based on request.getCustomerName()
+        Customer customer = customerRepository.findByBusinessId(businessId).stream()
+                .filter(c -> c.getName() != null && c.getName().equalsIgnoreCase(request.getCustomerName().trim()))
+                .findFirst()
+                .orElseGet(() -> {
+                    Customer newCustomer = Customer.builder()
+                            .name(request.getCustomerName().trim())
+                            .email(request.getCustomerEmail() != null && !request.getCustomerEmail().isBlank() 
+                                    ? request.getCustomerEmail().trim() : null)
+                            .phone(request.getCustomerAddress() != null && !request.getCustomerAddress().isBlank() 
+                                    ? request.getCustomerAddress().trim() : null)
+                            .business(business)
+                            .build();
+                    return customerRepository.save(newCustomer);
+                });
+
+        // 3. Calculate math securely on the server
+        BigDecimal subtotal = BigDecimal.ZERO;
+        if (request.getItems() != null) {
+            for (LineItemDTO item : request.getItems()) {
+                BigDecimal qty = new BigDecimal(item.getQuantity() != null ? item.getQuantity() : 1);
+                BigDecimal price = BigDecimal.valueOf(item.getUnitPrice() != null ? item.getUnitPrice() : 0.0);
+                subtotal = subtotal.add(qty.multiply(price));
+            }
+        }
+
+        // Calculate Tax
+        BigDecimal grandTotal = subtotal;
+        if (request.getTaxRate() != null && request.getTaxRate() > 0) {
+            BigDecimal taxMultiplier = BigDecimal.valueOf(request.getTaxRate())
+                    .divide(BigDecimal.valueOf(100), 4, java.math.RoundingMode.HALF_UP);
+            BigDecimal taxAmount = subtotal.multiply(taxMultiplier);
+            grandTotal = subtotal.add(taxAmount);
+        }
+
+        // 4. Parse the date string coming from Android ("14 Oct, 2026")
+        LocalDate dueDate;
+        try {
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM, yyyy", Locale.US);
+            dueDate = LocalDate.parse(request.getDueDate(), formatter);
+        } catch (Exception e) {
+            try {
+                dueDate = LocalDate.parse(request.getDueDate());
+            } catch (Exception ex) {
+                dueDate = LocalDate.now().plusDays(15);
+            }
+        }
+
+        // 5. Build the Invoice Entity
+        Invoice invoice = Invoice.builder()
+                .business(business)
+                .customer(customer)
+                .invoiceNumber("INV-" + System.currentTimeMillis())
+                .totalAmount(grandTotal)
+                .status(InvoiceStatus.ISSUED)
+                .memo(request.getMemoNotes())
+                .dueDate(dueDate)
+                .issueDate(LocalDate.now())
+                .build();
+
+        // 6. Map and save individual Line Items into the InvoiceItem table
+        if (request.getItems() != null) {
+            List<InvoiceItem> items = request.getItems().stream().map(itemDto -> {
+                int qty = itemDto.getQuantity() != null ? itemDto.getQuantity() : 1;
+                BigDecimal unitPrice = BigDecimal.valueOf(itemDto.getUnitPrice() != null ? itemDto.getUnitPrice() : 0.0);
+                InvoiceItem item = InvoiceItem.builder()
+                        .invoice(invoice)
+                        .description(itemDto.getDescription() != null && !itemDto.getDescription().isBlank() 
+                                ? itemDto.getDescription() : "Service")
+                        .quantity(qty)
+                        .unitPrice(unitPrice)
+                        .totalPrice(unitPrice.multiply(BigDecimal.valueOf(qty)))
+                        .build();
+                return item;
+            }).collect(Collectors.toList());
+            invoice.setItems(items);
+        }
+
+        // 7. Save to Database (CascadeType.ALL saves items automatically)
+        Invoice savedInvoice = invoiceRepository.save(invoice);
+
+        // 8. Kafka Event Trigger
+        try {
+            InvoiceCreatedEvent event = InvoiceCreatedEvent.builder()
+                    .invoiceId(savedInvoice.getId())
+                    .invoiceNumber(savedInvoice.getInvoiceNumber())
+                    .customerEmail(customer.getEmail())
+                    .customerName(customer.getName())
+                    .totalAmount(savedInvoice.getTotalAmount())
+                    .build();
+            invoiceProducer.sendInvoiceCreatedEvent(event);
+        } catch (Exception e) {
+            System.err.println("Warning: Kafka event skipped: " + e.getMessage());
+        }
+
+        // 9. Return clean response DTO
+        return InvoiceResponseDTO.builder()
+                .id(savedInvoice.getId())
+                .invoiceNumber(savedInvoice.getInvoiceNumber())
+                .status(savedInvoice.getStatus().name())
+                .totalAmount(savedInvoice.getTotalAmount())
+                .dueDate(savedInvoice.getDueDate())
+                .build();
+    }
 
     // @Transactional ensure karta hai ki agar beech mein koi error aaye,
     // toh aadhi adhuri DB entry save na ho (Maan lo invoice save ho gaya par items nahi).

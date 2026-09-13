@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,8 +39,14 @@ import com.example.invoicely.state.DashboardUiState
 @Composable
 fun DashboardScreen(
     uiState: DashboardUiState,
-    onNewInvoiceClick: () -> Unit = {}
+    onNewInvoiceClick: () -> Unit = {},
+    onRefresh: () -> Unit = {}
 ) {
+    // 🚀 Trigger data fetch whenever DashboardScreen enters composition / re-opens
+    LaunchedEffect(Unit) {
+        onRefresh()
+    }
+
     val canvasColor = Color(0xFFF6F5EC)
 
     Box(

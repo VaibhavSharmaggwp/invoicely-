@@ -55,6 +55,9 @@ public class Invoice {
     @Column(nullable = false)
     private BigDecimal totalAmount;
 
+    @Column
+    private String memo;
+
     // Ek invoice mein multiple items ho sakte hain (Jaise Laptop, Mouse, Keyboard)
     // Cascade = All ka matlab hai agar Invoice delete hui, toh uske Items bhi delete ho jayenge
     @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL, orphanRemoval = true)

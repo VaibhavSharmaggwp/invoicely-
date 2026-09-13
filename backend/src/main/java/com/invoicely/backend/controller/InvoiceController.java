@@ -1,6 +1,7 @@
 package com.invoicely.backend.controller;
 
 import com.invoicely.backend.Service.InvoiceService;
+import com.invoicely.backend.dto.CreateInvoiceRequest;
 import com.invoicely.backend.dto.InvoiceRequestDTO;
 import com.invoicely.backend.dto.InvoiceResponseDTO;
 import com.invoicely.backend.entity.Invoice;
@@ -22,17 +23,17 @@ public class InvoiceController {
     private final InvoiceService invoiceService;
 
     @PostMapping
-    public ResponseEntity<InvoiceResponseDTO> createInvoice(@Valid @RequestBody InvoiceRequestDTO requestDTO){
+    public ResponseEntity<Void> createInvoice(@RequestBody CreateInvoiceRequest requestDTO){
         // 1. Security Context se us user (business) ka email nikalo jisne API call ki hai.
         // Frontend ko apna email bhejne ki zaroorat nahi, JWT token me sab hai!
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userEmail = authentication.getName();
 
-        // 2. Service ko data aur email pass karo
-        InvoiceResponseDTO response = invoiceService.createInvoice(requestDTO, userEmail);
+        // 2. Service ko call karke invoice create karte hain
+        invoiceService.createNewInvoice(userEmail, requestDTO);
 
-        // 3. 201 Created status ke sath wapas bhejo
-        return new ResponseEntity<>(response, HttpStatus.CREATED);
+        // 3. Return 200 OK without a body (Android side par Unit / Void expect ho raha hai)
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping

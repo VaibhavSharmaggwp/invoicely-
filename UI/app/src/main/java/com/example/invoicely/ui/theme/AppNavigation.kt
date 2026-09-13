@@ -44,7 +44,9 @@ fun AppNavigation() {
             AuthScreen(
                 viewModel = authViewModel,
                 onAuthSuccess = {
-                    navController.navigate("main")
+                    navController.navigate("main") {
+                        popUpTo("auth") { inclusive = true }
+                    }
                 }
             )
         }
@@ -75,6 +77,9 @@ fun AppNavigation() {
                         uiState = dashboardViewModel.uiState.value,
                         onNewInvoiceClick = {
                             navController.navigate("create_invoice")
+                        },
+                        onRefresh = {
+                            dashboardViewModel.fetchDashboardData()
                         }
                     )
                 }

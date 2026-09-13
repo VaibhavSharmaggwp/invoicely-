@@ -67,7 +67,14 @@ flowchart TD
 
 ### 1. 📱 Android UI App (`UI/`)
 - **Modern Jetpack Compose & Material 3**: Built with a custom design system utilizing bespoke brand palettes (`Chartreuse`, `Ink`, `Cleared`) and custom Google Fonts (**Outfit** & **JetBrains Mono**).
-- **Fluid Animated Auth Experience**: Smooth tab switching with `animateContentSize()` and `AnimatedVisibility`, featuring exclusive Google Sign-In on the Log In screen, native email/password/phone registration, high-contrast dark text rendering, and intuitive navigation backstack management.
+- **Fluid Animated Auth Experience**: Smooth tab switching with `animateContentSize()` and `AnimatedVisibility`, featuring Google Sign-In, native email/password/phone registration, high-contrast dark text rendering, and intuitive navigation backstack management (`popUpTo("auth") { inclusive = true }`).
+- **Interactive Bento Invoice Creation Suite (`CreateInvoiceScreen`)**:
+  - **Numbered Bento Cards (01–05)**: Intuitive section flow covering Client Profile, Dynamic Line Items, GST & Surcharges, Payment Terms, and Bank Notes/Memos.
+  - **Live Statement Voucher Ticket**: High-contrast Obsidian Ink (`#151A11`) card with glowing Neon Chartreuse (`#DCEF3C`) accents, live-updating line items, subtotal, GST percentage, and grand total.
+  - **Dynamic Multi-Item Manager (`UiLineItem`)**: Allows adding, editing, and removing multiple line items on the fly with real-time price & quantity recalculations.
+  - **GST Selector & Payment Schedule Grid**: Quick selector chips for `0%`, `5%`, `12%`, `18%` GST, plus payment term chips (`On Receipt`, `Net 7`, `Net 15`, `Net 30`) that automatically calculate calendar due dates.
+  - **Sticky Total Action Bar**: Always-visible payable summary with a single-tap Issue Invoice CTA.
+  - **Lifecycle-Aware Auto Refresh**: Uses `LaunchedEffect(Unit) { onRefresh() }` to automatically refresh dashboard metrics whenever the user returns from invoice creation or re-logs in.
 - **Network Layer**: Powered by **Retrofit 2** & **OkHttp 4** with JSON content parsing (`converter-gson`) and logging interceptors for API communication with the Spring Boot backend.
 - **Responsive Navigation & Bento Dashboard UI**:
   - Scaffold-based navigation system (`MainScaffold`) and MVI state architecture (`DashboardUiState`) handling sealed states (`Loading`, `Success`, `Empty`, `Error`).
@@ -78,8 +85,13 @@ flowchart TD
     - **Recent Invoices & Status Pills**: Dynamic list featuring customer avatars, monospace currency values, and semantic status pills (`PAID`, `ISSUED`, `OVERDUE`, `PARTIALLY_PAID`).
     - **Shimmer Skeletons & Full-Screen Previews**: Pulsing shimmer skeleton (`DashboardLoadingSkeleton`) for loading states and full-screen device `@Preview` (`DashboardFullScreenPreview`) with mock data for instant design iteration in Android Studio.
 
-### 2. 🛡️ Backend Authentication & Security (`backend/`)
+### 2. 🛡️ Backend Authentication, Security & Invoicing Engine (`backend/`)
 - **Stateless JWT Security Filter Chain**: Custom `JwtAuthenticationFilter` and `JwtService` validating signed JWT tokens on protected endpoints.
+- **Transactional Invoice Creation (`POST /api/v1/invoices`)**:
+  - **Tamper-Proof Financial Math**: Secure server-side recalculation of line items, subtotals, GST amounts, and total payable values to prevent client-side manipulation.
+  - **Auto Customer Provisioning**: Automatically registers the client/customer under the authenticated business if not already present in the database.
+  - **Atomic Transaction Safety**: Marked with `@Transactional` so any line-item or customer failure rolls back the entire invoice transaction cleanly.
+  - **Memo & Bank Payment Instructions**: Persists client notes and payment details directly into the invoice record.
 - **Multi-Factor Auth & Google OAuth 2.0**: Supports native email/password registration with phone number persistence, along with Google OAuth 2.0 verification via `com.google.api-client`.
 - **Tenant Isolation**: Customer data and financial records strictly scoped by `business_id`.
 
@@ -87,7 +99,7 @@ flowchart TD
 
 ## 3. ⚡ Caching & Distributed Locks (Redis)
 - **Sub-Millisecond Dashboard Analytics**: `@Cacheable(value = "dashboard_summary", key = "#businessId")` caches monthly revenue math, received/outstanding counts, and top 5 recent invoices in Redis with a 10-minute TTL.
-- **Automated Cache Invalidation**: `@CacheEvict` and `PaymentService` cache eviction purge stale dashboard metrics immediately upon invoice creation or payment settlement.
+- **Zero-Lag Cache Eviction**: Automatically evicts stale dashboard metrics (`@CacheEvict(value = "dashboard_summary", key = "#userEmail")`) immediately upon new invoice creation or payment settlement.
 - **Concurrency Control**: Custom `DistributedLockService` using Redis atomic `SETNX` commands to prevent race conditions.
 
 ---
@@ -184,6 +196,12 @@ cd UI
 - Open the `UI/` directory in Android Studio.
 - Run on an Android Emulator or physical device.
 
+#### 📱 Physical Device Port Forwarding (ADB)
+If running on a physical Android phone via USB or Wireless Debugging, forward port `8080` to access the local Spring Boot backend directly:
+```bash
+adb reverse tcp:8080 tcp:8080
+```
+
 ---
 
 ## 📌 REST API Endpoint Reference
@@ -197,7 +215,7 @@ cd UI
 | `POST` | `/api/v1/businesses` | Authenticated | Register business profile |
 | `GET` | `/api/v1/businesses/me` | Authenticated | Fetch current business profile |
 | `GET` | `/api/v1/dashboard/summary` | Authenticated | High-performance cached Bento dashboard summary (Monthly revenue, growth %, paid/outstanding math, top 5 recent invoices) |
-| `POST` | `/api/v1/invoices` | Authenticated | Create invoice & emit Kafka event |
+| `POST` | `/api/v1/invoices` | Authenticated | Create invoice with auto customer registration, server-side GST math, and Redis cache eviction |
 | `GET` | `/api/v1/invoices` | Authenticated | List all invoices for business |
 | `GET` | `/api/v1/invoices?page=0&size=10` | Authenticated | Paginated & sorted invoice list |
 | `GET` | `/api/v1/invoices/dashboard-summary` | Authenticated | Cached dashboard financial metrics |
