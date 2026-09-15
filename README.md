@@ -75,18 +75,30 @@ flowchart TD
   - **GST Selector & Payment Schedule Grid**: Quick selector chips for `0%`, `5%`, `12%`, `18%` GST, plus payment term chips (`On Receipt`, `Net 7`, `Net 15`, `Net 30`) that automatically calculate calendar due dates.
   - **Sticky Total Action Bar**: Always-visible payable summary with a single-tap Issue Invoice CTA.
   - **Lifecycle-Aware Auto Refresh**: Uses `LaunchedEffect(Unit) { onRefresh() }` to automatically refresh dashboard metrics whenever the user returns from invoice creation or re-logs in.
-- **Network Layer**: Powered by **Retrofit 2** & **OkHttp 4** with JSON content parsing (`converter-gson`) and logging interceptors for API communication with the Spring Boot backend.
+- **Network Layer & Wireless Debugging**: Powered by **Retrofit 2** & **OkHttp 4** with auto-detection for Android Emulator (`10.0.2.2:8080`) and physical devices via Wireless Debugging on local Wi-Fi LAN (`192.168.1.17:8080`), eliminating dropped connection issues.
 - **Responsive Navigation & Bento Dashboard UI**:
   - Scaffold-based navigation system (`MainScaffold`) and MVI state architecture (`DashboardUiState`) handling sealed states (`Loading`, `Success`, `Empty`, `Error`).
+  - **Lifecycle-Aware Back Navigation**: Uses Jetpack Compose's `BackHandler` on the main dashboard to safely clear session tokens and route back to the Login screen on hardware back presses instead of exiting the app.
   - **Bento Grid Architecture (`DashboardContent`)**: High-contrast, scrollable financial dashboard featuring:
     - **HeroCard**: Ink-black card displaying current month's revenue with Indian Rupee formatting (`₹`) and dynamic growth badge (`Chartreuse`).
     - **PairCardsRow**: Side-by-side metric cards for *Received* (with cleared invoice counters) and *Outstanding* (with due vs. late overdue color-coded tags).
     - **QuickActionStrip**: Weighted quick-action shortcuts for *New Invoice*, *Quick Pay Link*, and *Export Report*.
-    - **Recent Invoices & Status Pills**: Dynamic list featuring customer avatars, monospace currency values, and semantic status pills (`PAID`, `ISSUED`, `OVERDUE`, `PARTIALLY_PAID`).
-    - **Shimmer Skeletons & Full-Screen Previews**: Pulsing shimmer skeleton (`DashboardLoadingSkeleton`) for loading states and full-screen device `@Preview` (`DashboardFullScreenPreview`) with mock data for instant design iteration in Android Studio.
+    - **Recent Invoices & Status Pills**: Dynamic list with click-through navigation to detailed invoice view (`invoice_detail/{invoiceId}`).
+    - **Shimmer Skeletons & Full-Screen Previews**: Pulsing shimmer skeleton (`DashboardLoadingSkeleton`) for loading states and full-screen device `@Preview` with mock data.
+- **Digital Paper Invoice Detail Screen (`InvoiceDetailScreen`)**:
+  - **State-Driven Architecture**: Fully reactive `InvoiceDetailUiState` handling `Loading` spinners, `Error` recovery prompts, and `Success` data states.
+  - **Luxury Digital Paper Receipt Card**: Realistic paper voucher aesthetic featuring custom perforated cut-lines rendered via Compose `Canvas` & `PathEffect.dashPathEffect`.
+  - **Dynamic Status Header**: Color-shifting status pills (`PAID` in emerald green, `OVERDUE` in ruby red, `ISSUED` in neutral ink) with typography in `JetBrains Mono` and `Outfit`.
+  - **Native Android Share Sheet**: Built-in Android `Intent.ACTION_SEND` chooser allowing merchants to share public payment links (`https://invoicely.app/pay/{id}`) directly across WhatsApp, Gmail, SMS, or Telegram.
+  - **Sticky Bottom Action Bar**: Elevated pending amount bottom bar with a single-tap *Record Payment* CTA that automatically hides once an invoice is marked `PAID`.
 
 ### 2. 🛡️ Backend Authentication, Security & Invoicing Engine (`backend/`)
 - **Stateless JWT Security Filter Chain**: Custom `JwtAuthenticationFilter` and `JwtService` validating signed JWT tokens on protected endpoints.
+- **Tenant-Isolated Single Invoice Detail (`GET /api/v1/invoices/{id}`)**:
+  - Secure tenant isolation via `findByIdAndBusinessId(invoiceId, businessId)` in `InvoiceRepository`.
+  - Automatic business identity resolution via Spring `SecurityContextHolder`.
+  - `@Transactional` persistence context preventing lazy initialization exceptions on invoice line items.
+  - Dynamic server-side recalculation of subtotals and GST tax amounts.
 - **Transactional Invoice Creation (`POST /api/v1/invoices`)**:
   - **Tamper-Proof Financial Math**: Secure server-side recalculation of line items, subtotals, GST amounts, and total payable values to prevent client-side manipulation.
   - **Auto Customer Provisioning**: Automatically registers the client/customer under the authenticated business if not already present in the database.
@@ -217,6 +229,7 @@ adb reverse tcp:8080 tcp:8080
 | `GET` | `/api/v1/dashboard/summary` | Authenticated | High-performance cached Bento dashboard summary (Monthly revenue, growth %, paid/outstanding math, top 5 recent invoices) |
 | `POST` | `/api/v1/invoices` | Authenticated | Create invoice with auto customer registration, server-side GST math, and Redis cache eviction |
 | `GET` | `/api/v1/invoices` | Authenticated | List all invoices for business |
+| `GET` | `/api/v1/invoices/{id}` | Authenticated | Fetch single invoice details with line items, tax breakdown, and customer metadata |
 | `GET` | `/api/v1/invoices?page=0&size=10` | Authenticated | Paginated & sorted invoice list |
 | `GET` | `/api/v1/invoices/dashboard-summary` | Authenticated | Cached dashboard financial metrics |
 | `GET` | `/api/v1/public/invoices/{id}` | Public | Public interactive invoice view with Razorpay CTA |

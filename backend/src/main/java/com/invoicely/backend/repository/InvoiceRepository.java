@@ -7,11 +7,15 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
     // Android Dashboard ke liye: Ek business ki saari invoices
     List<Invoice> findByBusinessId(UUID businessId);
+
+    // Specific invoice ko business ke sath securely fetch karne ke liye (Security check)
+    Optional<Invoice> findByIdAndBusinessId(UUID id, UUID businessId);
 
     // Pending Invoices count krne kr liye
     List<Invoice> findByBusinessIdAndStatus(UUID businessId, InvoiceStatus status);

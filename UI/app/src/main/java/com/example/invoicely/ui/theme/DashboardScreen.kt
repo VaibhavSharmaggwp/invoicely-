@@ -40,7 +40,8 @@ import com.example.invoicely.state.DashboardUiState
 fun DashboardScreen(
     uiState: DashboardUiState,
     onNewInvoiceClick: () -> Unit = {},
-    onRefresh: () -> Unit = {}
+    onRefresh: () -> Unit = {},
+    onInvoiceClick: (String) -> Unit = {}
 ) {
     // 🚀 Trigger data fetch whenever DashboardScreen enters composition / re-opens
     LaunchedEffect(Unit) {
@@ -62,7 +63,8 @@ fun DashboardScreen(
             is DashboardUiState.Error -> Text("Error: ${uiState.message}", modifier = Modifier.padding(16.dp), color = Color.Red)
             is DashboardUiState.Success -> DashboardSuccessLayout(
                 data = uiState.data,
-                onNewInvoiceClick = onNewInvoiceClick
+                onNewInvoiceClick = onNewInvoiceClick,
+                onInvoiceClick = onInvoiceClick
             )
         }
     }
@@ -72,7 +74,8 @@ fun DashboardScreen(
 @Composable
 fun DashboardSuccessLayout(
     data: DashboardSummaryResponse,
-    onNewInvoiceClick: () -> Unit = {}
+    onNewInvoiceClick: () -> Unit = {},
+    onInvoiceClick: (String) -> Unit = {}
 ) {
     LazyColumn(
         modifier = Modifier
@@ -134,7 +137,7 @@ fun DashboardSuccessLayout(
         items(data.recentInvoices) { invoice ->
             RecentInvoiceRow(
                 invoice = invoice,
-                onClick = { /* TODO: Navigate to Invoice Detail Screen */ }
+                onClick = { onInvoiceClick(invoice.id) }
             )
             Spacer(modifier = Modifier.height(12.dp))
         }

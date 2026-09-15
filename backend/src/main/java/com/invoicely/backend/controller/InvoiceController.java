@@ -2,6 +2,7 @@ package com.invoicely.backend.controller;
 
 import com.invoicely.backend.Service.InvoiceService;
 import com.invoicely.backend.dto.CreateInvoiceRequest;
+import com.invoicely.backend.dto.InvoiceDetailResponse;
 import com.invoicely.backend.dto.InvoiceRequestDTO;
 import com.invoicely.backend.dto.InvoiceResponseDTO;
 import com.invoicely.backend.entity.Invoice;
@@ -15,6 +16,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/invoices")
@@ -68,6 +70,18 @@ public class InvoiceController {
         String userEmail = authentication.getName();
         Page<Invoice> invoicePage = invoiceService.getInvoicesForUser(userEmail, page, size);
         return ResponseEntity.ok(invoicePage);
+    }
+
+    // Production: Get single invoice details belonging to authenticated user's business
+    @GetMapping("/{id}")
+    public ResponseEntity<InvoiceDetailResponse> getInvoice(@PathVariable UUID id) {
+        // 1. Extract authenticated user's email from SecurityContext
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userEmail = authentication.getName();
+
+        // 2. Fetch invoice details securely ensuring tenant isolation
+        InvoiceDetailResponse response = invoiceService.getInvoiceDetailsForUser(userEmail, id);
+        return ResponseEntity.ok(response);
     }
 
 }

@@ -5,6 +5,7 @@ import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
+import retrofit2.http.Path
 
 interface ApiService {
     @POST("api/v1/auth/login")
@@ -27,4 +28,10 @@ interface ApiService {
         @Header("Authorization") authHeader: String,
         @Body request: CreateInvoiceRequest
     ): Response<Unit> // 'Unit' means hume return me koi JSON nahi chahiye, bas 200 OK status chahiye
+
+    @GET("/api/v1/invoices/{id}")
+    suspend fun getInvoiceDetails(
+        @Header("Authorization") authHeader: String,
+        @Path("id") invoiceId: String
+    ): Response<InvoiceDetailResponse>
 }

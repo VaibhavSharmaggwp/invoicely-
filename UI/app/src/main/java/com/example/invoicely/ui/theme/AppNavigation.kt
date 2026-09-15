@@ -1,6 +1,8 @@
 package com.example.invoicely.ui.theme
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -14,6 +16,8 @@ import com.example.invoicely.viewmodel.CreateInvoiceViewModel
 import com.example.invoicely.viewmodel.CreateInvoiceViewModelFactory
 import com.example.invoicely.viewmodel.DashboardViewModel
 import com.example.invoicely.viewmodel.DashboardViewModelFactory
+import com.example.invoicely.viewmodel.InvoiceDetailViewModel
+import com.example.invoicely.viewmodel.InvoiceDetailViewModelFactory
 
 @Composable
 fun AppNavigation() {
@@ -60,7 +64,15 @@ fun AppNavigation() {
             // 2. Instantiate the DashboardViewModel
             val dashboardViewModel: DashboardViewModel = viewModel(factory = factory)
 
-            // 3. Pass the UI state to your MainScaffold
+            // 3. Intercept back press on Dashboard: Go back to Login screen instead of closing app
+            BackHandler {
+                tokenManager.clearToken()
+                navController.navigate("auth") {
+                    popUpTo("main") { inclusive = true }
+                }
+            }
+
+            // 4. Pass the UI state to your MainScaffold
             MainScaffold(
                 onNewInvoiceClick = {
                     navController.navigate("create_invoice")
@@ -77,6 +89,9 @@ fun AppNavigation() {
                         uiState = dashboardViewModel.uiState.value,
                         onNewInvoiceClick = {
                             navController.navigate("create_invoice")
+                        },
+                        onInvoiceClick = { invoiceId ->
+                            navController.navigate("invoice_detail/$invoiceId")
                         },
                         onRefresh = {
                             dashboardViewModel.fetchDashboardData()
@@ -100,6 +115,28 @@ fun AppNavigation() {
                 onSaveSuccess = {
                     navController.popBackStack()
                 }
+            )
+        }
+
+        composable("invoice_detail/{invoiceId}") { backStackEntry ->
+            val invoiceId = backStackEntry.arguments?.getString("invoiceId") ?: return@composable
+
+            // Factory and ViewModel setup
+            val context = LocalContext.current
+            val tokenManager = remember { TokenManager(context) }
+            val factory = remember { InvoiceDetailViewModelFactory(tokenManager) }
+            val viewModel: InvoiceDetailViewModel = viewModel(factory = factory)
+
+            // Fetch data only once when screen opens
+            LaunchedEffect(invoiceId) {
+                viewModel.fetchInvoiceDetails(invoiceId)
+            }
+
+            InvoiceDetailScreen(
+                uiState = viewModel.uistate.value,
+                onBackClick = { navController.popBackStack() },
+                onDownloadPdfClick = { /* TODO later */ },
+                onRecordPaymentClick = { /* TODO later */ }
             )
         }
     }

@@ -2,11 +2,8 @@ package com.invoicely.backend.Service;
 
 
 import com.invoicely.backend.Service.RazorpayService;
-import com.invoicely.backend.dto.CreateInvoiceRequest;
-import com.invoicely.backend.dto.InvoiceRequestDTO;
-import com.invoicely.backend.dto.InvoiceResponseDTO;
-import com.invoicely.backend.dto.LineItemDTO;
-import com.invoicely.backend.dto.PublicInvoiceDTO;
+import com.invoicely.backend.dto.*;
+
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import com.invoicely.backend.entity.Business;
@@ -347,5 +344,71 @@ public class InvoiceService {
         Business business = businessRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("Business not found"));
         return getInvoicesForBusiness(business.getId(), pageNumber, pageSize);
+    }
+
+    // Overloaded method extracting business from userEmail in SecurityContext
+    @Transactional
+    public InvoiceDetailResponse getInvoiceDetailsForUser(String userEmail, UUID invoiceId) {
+        Business business = businessRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("Business not found"));
+        return getInvoiceDetails(invoiceId, business.getId());
+    }
+
+    // Fetch a single invoice with its line items (ensuring tenant isolation via businessId)
+    @Transactional
+    public InvoiceDetailResponse getInvoiceDetails(UUID invoiceId, UUID businessId){
+        // 1. Fetch the invoice from PostgreSQL with businessId security check
+        Invoice invoice = invoiceRepository.findByIdAndBusinessId(invoiceId, businessId)
+                .orElseThrow(() -> new RuntimeException("Invoice not found or unauthorized"));
+
+        // 2. Map Database Line Items to DTOs
+        List<LineItemDTO> itemDTOS = invoice.getItems().stream().map(item -> {
+            LineItemDTO dto = new LineItemDTO();
+            dto.setDescription(item.getDescription());
+            dto.setQuantity(item.getQuantity());
+            dto.setUnitPrice(item.getUnitPrice() != null ? item.getUnitPrice().doubleValue() : 0.0);
+            return dto;
+        }).toList();
+
+        // 3. Calculate Subtotal & Tax
+        BigDecimal subtotal = BigDecimal.ZERO;
+        if (invoice.getItems() != null && !invoice.getItems().isEmpty()) {
+            for (InvoiceItem item : invoice.getItems()) {
+                if (item.getTotalPrice() != null) {
+                    subtotal = subtotal.add(item.getTotalPrice());
+                } else if (item.getUnitPrice() != null && item.getQuantity() != null) {
+                    subtotal = subtotal.add(item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
+                }
+            }
+        } else {
+            subtotal = invoice.getTotalAmount() != null ? invoice.getTotalAmount() : BigDecimal.ZERO;
+        }
+
+        BigDecimal grandTotal = invoice.getTotalAmount() != null ? invoice.getTotalAmount() : subtotal;
+        BigDecimal taxAmount = grandTotal.compareTo(subtotal) > 0 
+                ? grandTotal.subtract(subtotal) 
+                : BigDecimal.ZERO;
+
+        // 4. Format Dates
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM, yyyy", Locale.US);
+
+        String customerName = invoice.getCustomer() != null ? invoice.getCustomer().getName() : "N/A";
+        String customerEmail = invoice.getCustomer() != null && invoice.getCustomer().getEmail() != null 
+                ? invoice.getCustomer().getEmail() : "";
+
+        return InvoiceDetailResponse.builder()
+                .id(invoice.getId().toString())
+                .invoiceNumber(invoice.getInvoiceNumber())
+                .status(invoice.getStatus().name())
+                .customerName(customerName)
+                .customerEmail(customerEmail)
+                .issueDate(invoice.getIssueDate() != null ? invoice.getIssueDate().format(formatter) : "")
+                .dueDate(invoice.getDueDate() != null ? invoice.getDueDate().format(formatter) : "")
+                .items(itemDTOS)
+                .subtotal(subtotal)
+                .taxAmount(taxAmount)
+                .grandTotal(grandTotal)
+                .memoNotes(invoice.getMemo() != null ? invoice.getMemo() : "")
+                .build();
     }
 }

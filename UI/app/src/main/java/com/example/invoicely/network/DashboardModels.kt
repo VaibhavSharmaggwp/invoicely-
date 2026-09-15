@@ -50,3 +50,19 @@ data class LineItemDto(
     val quantity: Int,
     val unitPrice: Double
 )
+
+// 3. KOTLIN DTO (Matches the Java InvoiceDetailResponse)
+data class InvoiceDetailResponse(
+    val id: String,
+    val invoiceNumber: String,
+    val status: String,
+    val customerName: String,
+    val customerEmail: String,
+    val issueDate: String,
+    val dueDate: String,
+    val items: List<LineItemDto>, // Reusing the same LineItemDto from earlier
+    val subtotal: Double,
+    val taxAmount: Double,
+    val grandTotal: Double,
+    val memoNotes: String
+)
