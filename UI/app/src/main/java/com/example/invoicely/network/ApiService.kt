@@ -34,4 +34,11 @@ interface ApiService {
         @Header("Authorization") authHeader: String,
         @Path("id") invoiceId: String
     ): Response<InvoiceDetailResponse>
+
+    @POST("/api/v1/invoices/{id}/payments")
+    suspend fun recordPayment(
+        @Header("Authorization") authHeader: String,
+        @Path("id") invoiceId: String,
+        @Body request: RecordPaymentRequest
+    ): Response<Unit>
 }

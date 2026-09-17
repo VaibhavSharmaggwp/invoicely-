@@ -1,10 +1,7 @@
 package com.invoicely.backend.controller;
 
 import com.invoicely.backend.Service.InvoiceService;
-import com.invoicely.backend.dto.CreateInvoiceRequest;
-import com.invoicely.backend.dto.InvoiceDetailResponse;
-import com.invoicely.backend.dto.InvoiceRequestDTO;
-import com.invoicely.backend.dto.InvoiceResponseDTO;
+import com.invoicely.backend.dto.*;
 import com.invoicely.backend.entity.Invoice;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -82,6 +79,19 @@ public class InvoiceController {
         // 2. Fetch invoice details securely ensuring tenant isolation
         InvoiceDetailResponse response = invoiceService.getInvoiceDetailsForUser(userEmail, id);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{id}/payments")
+    public ResponseEntity<Void> recordPayment(
+            @PathVariable UUID id,
+            @RequestBody RecordPaymentRequest request
+    ){
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userEmail = authentication.getName();
+
+        invoiceService.recordPayment(userEmail, id, request);
+
+        return ResponseEntity.ok().build();
     }
 
 }

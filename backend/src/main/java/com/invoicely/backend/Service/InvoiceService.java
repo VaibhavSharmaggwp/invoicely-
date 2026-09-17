@@ -10,14 +10,17 @@ import com.invoicely.backend.entity.Business;
 import com.invoicely.backend.entity.Customer;
 import com.invoicely.backend.entity.Invoice;
 import com.invoicely.backend.entity.InvoiceItem;
+import com.invoicely.backend.entity.PaymentHistory;
 import com.invoicely.backend.enums.InvoiceStatus;
 import com.invoicely.backend.event.InvoiceCreatedEvent;
 import com.invoicely.backend.kafka.InvoiceProducer;
 import com.invoicely.backend.repository.BusinessRepository;
 import com.invoicely.backend.repository.CustomerRepository;
 import com.invoicely.backend.repository.InvoiceRepository;
+import com.invoicely.backend.repository.PaymentHistoryRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -38,6 +41,8 @@ public class InvoiceService {
     private final BusinessRepository businessRepository;
     private final InvoiceProducer invoiceProducer;
     private final RazorpayService razorpayService;
+    private final PaymentHistoryRepository paymentRepository;
+    private final CacheManager cacheManager;
     
 
 
@@ -410,5 +415,67 @@ public class InvoiceService {
                 .grandTotal(grandTotal)
                 .memoNotes(invoice.getMemo() != null ? invoice.getMemo() : "")
                 .build();
+    }
+
+    // 🚀 CACHE EVICT: Payment receive hote hi Dashboard ka cache clear karna zaroori hai!
+    @Transactional
+    @CacheEvict(value = "dashboard_summary", key = "#businessId")
+    public void recordPayment(UUID invoiceId, UUID businessId, RecordPaymentRequest request) {
+        
+        // 0. Validation: Amount must be provided and greater than zero
+        if (request == null || request.getAmount() == null || request.getAmount() <= 0) {
+            throw new IllegalArgumentException("Payment amount must be greater than zero");
+        }
+
+        // 1. Fetch the Invoice safely
+        Invoice invoice = invoiceRepository.findByIdAndBusinessId(invoiceId, businessId)
+                .orElseThrow(() -> new RuntimeException("Invoice not found or unauthorized"));
+
+        // Guard: Check already-paid or void invoices
+        if (invoice.getStatus() == InvoiceStatus.PAID) {
+            throw new IllegalStateException("This invoice has already been paid in full.");
+        }
+        if (invoice.getStatus() == InvoiceStatus.VOID) {
+            throw new IllegalStateException("Cannot record payment for a voided invoice.");
+        }
+
+        // 2. Create the Ledger Entry (Payment History)
+        PaymentHistory payment = new PaymentHistory();
+        payment.setInvoice(invoice);
+        payment.setInvoiceId(invoice.getId());
+        payment.setAmount(request.getAmount());
+        payment.setMethod(request.getPaymentMethod() != null ? request.getPaymentMethod() : "MANUAL");
+        payment.setPaymentDate(LocalDate.now());
+        
+        // Save the payment receipt to the database
+        paymentRepository.save(payment);
+
+        // 3. Math Check & Status Update: Partial vs Full Payment
+        BigDecimal totalPaidSoFar = paymentRepository.getTotalPaidForInvoice(invoice.getId());
+        if (totalPaidSoFar == null) {
+            totalPaidSoFar = payment.getAmountPaid();
+        }
+
+        BigDecimal invoiceTotal = invoice.getTotalAmount() != null ? invoice.getTotalAmount() : BigDecimal.ZERO;
+        if (totalPaidSoFar.compareTo(invoiceTotal) >= 0) {
+            invoice.setStatus(InvoiceStatus.PAID);
+        } else {
+            invoice.setStatus(InvoiceStatus.PARTIALLY_PAID);
+        }
+        
+        // Save the updated invoice
+        invoiceRepository.save(invoice);
+
+        // Evict dashboard cache so UI instantly reflects new revenue
+        if (cacheManager != null && cacheManager.getCache("dashboard_summary") != null) {
+            cacheManager.getCache("dashboard_summary").evict(businessId);
+        }
+    }
+
+    @Transactional
+    public void recordPayment(String userEmail, UUID invoiceId, RecordPaymentRequest request) {
+        Business business = businessRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("Business not found"));
+        recordPayment(invoiceId, business.getId(), request);
     }
 }

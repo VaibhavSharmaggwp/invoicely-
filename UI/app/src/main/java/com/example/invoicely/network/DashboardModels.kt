@@ -66,3 +66,8 @@ data class InvoiceDetailResponse(
     val grandTotal: Double,
     val memoNotes: String
 )
+
+data class RecordPaymentRequest(
+    val amount: Double,
+    val paymentMethod: String
+)

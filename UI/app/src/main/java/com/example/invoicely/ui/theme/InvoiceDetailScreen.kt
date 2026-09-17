@@ -35,6 +35,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -58,7 +62,9 @@ fun InvoiceDetailScreen(
     uiState: InvoiceDetailUiState,
     onBackClick: () -> Unit,
     onDownloadPdfClick: () -> Unit,
-    onRecordPaymentClick: () -> Unit
+    onRecordPaymentClick: () -> Unit = {},
+    onConfirmPayment: (suspend (amount: Double, method: String) -> Boolean)? = null,
+    onPaymentSuccess: () -> Unit = {}
 ) {
     val canvasBg = Color(0xFFF6F5EC)
     val inkColor = Color(0xFF151A11)
@@ -104,7 +110,9 @@ fun InvoiceDetailScreen(
                     invoice = uiState.data,
                     onBackClick = onBackClick,
                     onDownloadPdfClick = onDownloadPdfClick,
-                    onRecordPaymentClick = onRecordPaymentClick
+                    onRecordPaymentClick = onRecordPaymentClick,
+                    onConfirmPayment = onConfirmPayment,
+                    onPaymentSuccess = onPaymentSuccess
                 )
             }
         }
@@ -117,8 +125,24 @@ fun InvoiceDetailSuccessLayout(
     invoice: InvoiceDetailResponse,
     onBackClick: () -> Unit,
     onDownloadPdfClick: () -> Unit,
-    onRecordPaymentClick: () -> Unit
+    onRecordPaymentClick: () -> Unit = {},
+    onConfirmPayment: (suspend (amount: Double, method: String) -> Boolean)? = null,
+    onPaymentSuccess: () -> Unit = {}
 ) {
+    var showPaymentSheet by remember { mutableStateOf(false) }
+
+    if (showPaymentSheet) {
+        RecordPaymentBottomSheet(
+            invoiceTotal = invoice.grandTotal,
+            onDismiss = { showPaymentSheet = false },
+            onConfirmPayment = onConfirmPayment,
+            onPaymentSaved = { amount, method ->
+                showPaymentSheet = false
+                onPaymentSuccess()
+            }
+        )
+    }
+
     // 🚀 SHARE INTENT SETUP
     val context = LocalContext.current
 
@@ -199,7 +223,7 @@ fun InvoiceDetailSuccessLayout(
                         }
 
                         Button(
-                            onClick = onRecordPaymentClick,
+                            onClick = { showPaymentSheet = true },
                             modifier = Modifier
                                 .height(54.dp)
                                 .padding(start = 16.dp),

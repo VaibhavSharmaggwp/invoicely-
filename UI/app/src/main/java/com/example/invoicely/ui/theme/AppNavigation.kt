@@ -136,7 +136,13 @@ fun AppNavigation() {
                 uiState = viewModel.uistate.value,
                 onBackClick = { navController.popBackStack() },
                 onDownloadPdfClick = { /* TODO later */ },
-                onRecordPaymentClick = { /* TODO later */ }
+                onRecordPaymentClick = { /* TODO later */ },
+                onConfirmPayment = { amount, method ->
+                    viewModel.submitPayment(invoiceId, amount, method)
+                },
+                onPaymentSuccess = {
+                    viewModel.fetchInvoiceDetails(invoiceId)
+                }
             )
         }
     }

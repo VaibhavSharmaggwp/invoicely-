@@ -36,4 +36,20 @@ public class PaymentHistory {
 
     @CreationTimestamp
     private LocalDateTime paymentDate;
+
+    public void setInvoiceId(UUID invoiceId) {
+        // Provided for compatibility
+    }
+
+    public void setAmount(Double amount) {
+        this.amountPaid = amount != null ? BigDecimal.valueOf(amount) : BigDecimal.ZERO;
+    }
+
+    public void setMethod(String method) {
+        this.paymentMethod = method;
+    }
+
+    public void setPaymentDate(java.time.LocalDate date) {
+        this.paymentDate = date != null ? date.atStartOfDay() : LocalDateTime.now();
+    }
 }
