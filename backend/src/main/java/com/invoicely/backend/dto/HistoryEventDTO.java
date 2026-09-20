@@ -25,4 +25,7 @@ public class HistoryEventDTO {
     private String transactionId;
     private String time;
     private String date;
+
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private java.time.LocalDateTime timestamp;
 }

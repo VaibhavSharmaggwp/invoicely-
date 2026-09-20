@@ -516,8 +516,9 @@ public class InvoiceService {
 
         // 1. Map real payment settlements from payment_history
         for (PaymentHistory ph : payments) {
-            String timeStr = ph.getPaymentDate() != null ? ph.getPaymentDate().format(timeFormatter) : "12:00";
-            String dateStr = ph.getPaymentDate() != null ? ph.getPaymentDate().format(dateFormatter) : "Recent";
+            java.time.LocalDateTime payTime = ph.getPaymentDate() != null ? ph.getPaymentDate() : java.time.LocalDateTime.now();
+            String timeStr = payTime.format(timeFormatter);
+            String dateStr = payTime.format(dateFormatter);
             String custName = (ph.getInvoice() != null && ph.getInvoice().getCustomer() != null)
                     ? ph.getInvoice().getCustomer().getName() : "Customer";
             String invNumber = ph.getInvoice() != null ? ph.getInvoice().getInvoiceNumber() : "";
@@ -526,7 +527,7 @@ public class InvoiceService {
             events.add(HistoryEventDTO.builder()
                     .id(ph.getId() != null ? ph.getId().toString() : UUID.randomUUID().toString())
                     .type("PAYMENT_RECEIVED")
-                    .title("Received ₹" + (ph.getAmountPaid() != null ? ph.getAmountPaid().toPlainString() : "0") + " via " + ph.getPaymentMethod())
+                    .title("Received ₹" + (ph.getAmountPaid() != null ? ph.getAmountPaid().toPlainString() : "0") + " via " + (ph.getPaymentMethod() != null ? ph.getPaymentMethod() : "SETTLEMENT"))
                     .subtitle("Settlement for invoice " + invNumber)
                     .customerName(custName)
                     .invoiceNumber(invNumber)
@@ -536,6 +537,7 @@ public class InvoiceService {
                     .transactionId(ph.getTransactionId() != null ? ph.getTransactionId() : "TXN-" + (ph.getId() != null ? ph.getId().toString().substring(0, 8) : "N/A"))
                     .time(timeStr)
                     .date(dateStr)
+                    .timestamp(payTime)
                     .build());
         }
 
@@ -543,9 +545,13 @@ public class InvoiceService {
         for (Invoice inv : invoices) {
             String custName = inv.getCustomer() != null ? inv.getCustomer().getName() : "Customer";
             String invNumber = inv.getInvoiceNumber();
-            String dateStr = inv.getIssueDate() != null ? inv.getIssueDate().format(dateFormatter) : "Recent";
+            java.time.LocalDateTime invCreated = inv.getCreatedAt() != null ? inv.getCreatedAt() :
+                    (inv.getIssueDate() != null ? inv.getIssueDate().atStartOfDay() : java.time.LocalDateTime.now());
+            String timeStr = invCreated.format(timeFormatter);
+            String dateStr = inv.getIssueDate() != null ? inv.getIssueDate().format(dateFormatter) : invCreated.format(dateFormatter);
 
             if (inv.getStatus() == InvoiceStatus.OVERDUE) {
+                java.time.LocalDateTime dueTime = inv.getDueDate() != null ? inv.getDueDate().atTime(23, 59) : invCreated;
                 events.add(HistoryEventDTO.builder()
                         .id("ovd-" + inv.getId().toString())
                         .type("OVERDUE")
@@ -557,8 +563,9 @@ public class InvoiceService {
                         .amount(inv.getTotalAmount())
                         .paymentMethod("")
                         .transactionId("")
-                        .time("09:00")
+                        .time(dueTime.format(timeFormatter))
                         .date(inv.getDueDate() != null ? inv.getDueDate().format(dateFormatter) : dateStr)
+                        .timestamp(dueTime)
                         .build());
             }
 
@@ -573,10 +580,19 @@ public class InvoiceService {
                     .amount(inv.getTotalAmount())
                     .paymentMethod("")
                     .transactionId("")
-                    .time("10:00")
+                    .time(timeStr)
                     .date(dateStr)
+                    .timestamp(invCreated)
                     .build());
         }
+
+        // Sort all events chronologically (most recent first)
+        events.sort((a, b) -> {
+            if (a.getTimestamp() == null && b.getTimestamp() == null) return 0;
+            if (a.getTimestamp() == null) return 1;
+            if (b.getTimestamp() == null) return -1;
+            return b.getTimestamp().compareTo(a.getTimestamp());
+        });
 
         return events;
     }
