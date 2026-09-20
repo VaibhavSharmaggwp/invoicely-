@@ -27,8 +27,12 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import com.invoicely.backend.dto.HistoryEventDTO;
+import com.invoicely.backend.entity.PaymentHistory;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -497,5 +501,83 @@ public class InvoiceService {
                 .status(inv.getStatus() != null ? inv.getStatus().name() : "")
                 .build()
         ).toList();
+    }
+
+    public List<HistoryEventDTO> getActivityHistory(String userEmail) {
+        Business business = businessRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("Business not found"));
+
+        List<PaymentHistory> payments = paymentRepository.findAllByBusinessIdOrderByPaymentDateDesc(business.getId());
+        List<Invoice> invoices = invoiceRepository.findAllByBusinessIdOrderByIssueDateDesc(business.getId());
+
+        List<HistoryEventDTO> events = new ArrayList<>();
+        DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd MMM, yyyy");
+
+        // 1. Map real payment settlements from payment_history
+        for (PaymentHistory ph : payments) {
+            String timeStr = ph.getPaymentDate() != null ? ph.getPaymentDate().format(timeFormatter) : "12:00";
+            String dateStr = ph.getPaymentDate() != null ? ph.getPaymentDate().format(dateFormatter) : "Recent";
+            String custName = (ph.getInvoice() != null && ph.getInvoice().getCustomer() != null)
+                    ? ph.getInvoice().getCustomer().getName() : "Customer";
+            String invNumber = ph.getInvoice() != null ? ph.getInvoice().getInvoiceNumber() : "";
+            UUID invId = ph.getInvoice() != null ? ph.getInvoice().getId() : null;
+
+            events.add(HistoryEventDTO.builder()
+                    .id(ph.getId() != null ? ph.getId().toString() : UUID.randomUUID().toString())
+                    .type("PAYMENT_RECEIVED")
+                    .title("Received ₹" + (ph.getAmountPaid() != null ? ph.getAmountPaid().toPlainString() : "0") + " via " + ph.getPaymentMethod())
+                    .subtitle("Settlement for invoice " + invNumber)
+                    .customerName(custName)
+                    .invoiceNumber(invNumber)
+                    .invoiceId(invId)
+                    .amount(ph.getAmountPaid())
+                    .paymentMethod(ph.getPaymentMethod() != null ? ph.getPaymentMethod() : "MANUAL")
+                    .transactionId(ph.getTransactionId() != null ? ph.getTransactionId() : "TXN-" + (ph.getId() != null ? ph.getId().toString().substring(0, 8) : "N/A"))
+                    .time(timeStr)
+                    .date(dateStr)
+                    .build());
+        }
+
+        // 2. Map invoice creations and overdues
+        for (Invoice inv : invoices) {
+            String custName = inv.getCustomer() != null ? inv.getCustomer().getName() : "Customer";
+            String invNumber = inv.getInvoiceNumber();
+            String dateStr = inv.getIssueDate() != null ? inv.getIssueDate().format(dateFormatter) : "Recent";
+
+            if (inv.getStatus() == InvoiceStatus.OVERDUE) {
+                events.add(HistoryEventDTO.builder()
+                        .id("ovd-" + inv.getId().toString())
+                        .type("OVERDUE")
+                        .title(invNumber + " is Overdue")
+                        .subtitle("Payment of ₹" + (inv.getTotalAmount() != null ? inv.getTotalAmount().toPlainString() : "0") + " is overdue")
+                        .customerName(custName)
+                        .invoiceNumber(invNumber)
+                        .invoiceId(inv.getId())
+                        .amount(inv.getTotalAmount())
+                        .paymentMethod("")
+                        .transactionId("")
+                        .time("09:00")
+                        .date(inv.getDueDate() != null ? inv.getDueDate().format(dateFormatter) : dateStr)
+                        .build());
+            }
+
+            events.add(HistoryEventDTO.builder()
+                    .id("inv-" + inv.getId().toString())
+                    .type("INVOICE_CREATED")
+                    .title("Issued " + invNumber)
+                    .subtitle("Billed to " + custName + " for ₹" + (inv.getTotalAmount() != null ? inv.getTotalAmount().toPlainString() : "0"))
+                    .customerName(custName)
+                    .invoiceNumber(invNumber)
+                    .invoiceId(inv.getId())
+                    .amount(inv.getTotalAmount())
+                    .paymentMethod("")
+                    .transactionId("")
+                    .time("10:00")
+                    .date(dateStr)
+                    .build());
+        }
+
+        return events;
     }
 }

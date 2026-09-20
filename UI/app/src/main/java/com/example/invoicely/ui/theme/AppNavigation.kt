@@ -43,6 +43,9 @@ import com.example.invoicely.viewmodel.InvoiceDetailViewModelFactory
 import com.example.invoicely.viewmodel.InvoicesListUiState
 import com.example.invoicely.viewmodel.InvoicesListViewModel
 import com.example.invoicely.viewmodel.InvoicesListViewModelFactory
+import com.example.invoicely.viewmodel.HistoryViewModel
+import com.example.invoicely.viewmodel.HistoryViewModelFactory
+import com.example.invoicely.viewmodel.HistoryUiState
 
 @Composable
 fun AppNavigation() {
@@ -86,6 +89,7 @@ fun AppNavigation() {
             val tokenManager = remember { TokenManager(context) }
             val dashboardFactory = remember { DashboardViewModelFactory(tokenManager) }
             val ledgerFactory = remember { InvoicesListViewModelFactory(tokenManager) }
+            val historyFactory = remember { HistoryViewModelFactory(tokenManager) }
 
             // 2. State to track which tab is currently selected
             var currentTab by remember { mutableStateOf("dashboard") }
@@ -181,26 +185,56 @@ fun AppNavigation() {
                         }
                     }
                     "history" -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Text(
-                                    text = "Payment History",
-                                    fontSize = 20.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    fontFamily = OutfitFontFamily,
-                                    color = Color(0xFF151A11)
-                                )
-                                Text(
-                                    text = "Transaction records coming soon",
-                                    fontSize = 14.sp,
-                                    fontFamily = OutfitFontFamily,
-                                    color = Color(0xFF73786D)
+                        val historyViewModel: HistoryViewModel = viewModel(factory = historyFactory)
+                        LaunchedEffect(Unit) {
+                            historyViewModel.fetchHistory()
+                        }
+
+                        when (val state = historyViewModel.uiState.value) {
+                            is HistoryUiState.Loading -> {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(color = Color(0xFF151A11))
+                                }
+                            }
+                            is HistoryUiState.Error -> {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(24.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        Text(
+                                            text = state.message,
+                                            color = Color(0xFFD32F2F),
+                                            fontFamily = OutfitFontFamily,
+                                            fontSize = 15.sp,
+                                            textAlign = TextAlign.Center
+                                        )
+                                        Button(
+                                            onClick = { historyViewModel.fetchHistory() },
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF151A11)),
+                                            shape = RoundedCornerShape(12.dp)
+                                        ) {
+                                            Text("Retry", color = Color.White, fontFamily = OutfitFontFamily)
+                                        }
+                                    }
+                                }
+                            }
+                            is HistoryUiState.Success -> {
+                                HistoryScreen(
+                                    events = state.events,
+                                    onInvoiceClick = { invoiceId ->
+                                        if (invoiceId.isNotBlank()) {
+                                            navController.navigate("invoice_detail/$invoiceId")
+                                        }
+                                    }
                                 )
                             }
                         }

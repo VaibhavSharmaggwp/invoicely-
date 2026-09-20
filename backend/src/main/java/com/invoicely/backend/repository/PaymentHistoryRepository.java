@@ -14,5 +14,8 @@ public interface PaymentHistoryRepository extends JpaRepository<PaymentHistory, 
     // Yeh custom query saari payments ka sum nikal kar degi ek invoice ke liye
     @Query("SELECT SUM(p.amountPaid) FROM PaymentHistory p WHERE p.invoice.id = :invoiceId")
     BigDecimal getTotalPaidForInvoice(@Param("invoiceId") UUID invoiceId);
+
+    @Query("SELECT p FROM PaymentHistory p WHERE p.invoice.business.id = :businessId ORDER BY p.paymentDate DESC")
+    java.util.List<PaymentHistory> findAllByBusinessIdOrderByPaymentDateDesc(@Param("businessId") UUID businessId);
 }
 

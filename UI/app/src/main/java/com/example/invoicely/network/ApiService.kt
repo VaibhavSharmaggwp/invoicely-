@@ -46,4 +46,9 @@ interface ApiService {
     suspend fun getAllInvoices(
         @Header("Authorization") authHeader: String
     ): Response<List<RecentInvoiceDto>>
+
+    @GET("/api/v1/invoices/history")
+    suspend fun getActivityHistory(
+        @Header("Authorization") authHeader: String
+    ): Response<List<HistoryEventDto>>
 }

@@ -71,3 +71,25 @@ data class RecordPaymentRequest(
     val amount: Double,
     val paymentMethod: String
 )
+
+enum class HistoryEventType {
+    PAYMENT_RECEIVED,
+    INVOICE_CREATED,
+    OVERDUE,
+    SYSTEM_ALERT
+}
+
+data class HistoryEventDto(
+    val id: String = "",
+    val type: String = "SYSTEM_ALERT",
+    val title: String = "",
+    val subtitle: String = "",
+    val customerName: String = "",
+    val invoiceNumber: String = "",
+    val invoiceId: String? = null,
+    val amount: Double = 0.0,
+    val paymentMethod: String = "",
+    val transactionId: String = "",
+    val time: String = "",
+    val date: String = ""
+)

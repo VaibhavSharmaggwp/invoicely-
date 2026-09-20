@@ -92,4 +92,13 @@ public class InvoiceController {
 
         return ResponseEntity.ok().build();
     }
+
+    @GetMapping("/history")
+    public ResponseEntity<List<HistoryEventDTO>> getHistory() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userEmail = authentication.getName();
+
+        List<HistoryEventDTO> history = invoiceService.getActivityHistory(userEmail);
+        return ResponseEntity.ok(history);
+    }
 }
