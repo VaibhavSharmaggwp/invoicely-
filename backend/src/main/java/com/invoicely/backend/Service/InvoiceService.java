@@ -478,4 +478,24 @@ public class InvoiceService {
                 .orElseThrow(() -> new RuntimeException("Business not found"));
         recordPayment(invoiceId, business.getId(), request);
     }
+
+    public List<RecentInvoiceDTO> getAllInvoices(String userEmail) {
+        Business business = businessRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("Business not found"));
+        return getAllInvoices(business.getId());
+    }
+
+    public List<RecentInvoiceDTO> getAllInvoices(UUID businessId) {
+        List<Invoice> invoices = invoiceRepository.findAllByBusinessIdOrderByIssueDateDesc(businessId);
+
+        // Convert Entity list to DTO list
+        return invoices.stream().map(inv -> RecentInvoiceDTO.builder()
+                .id(inv.getId())
+                .invoiceNumber(inv.getInvoiceNumber())
+                .customerName(inv.getCustomer() != null ? inv.getCustomer().getName() : "Unknown")
+                .totalAmount(inv.getTotalAmount())
+                .status(inv.getStatus() != null ? inv.getStatus().name() : "")
+                .build()
+        ).toList();
+    }
 }

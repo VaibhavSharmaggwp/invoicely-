@@ -34,4 +34,7 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
     // Yeh query database ko bolegi: Is business ki saari invoices lao,
     // naye se purane (DESC) order me sort karo, aur sirf top 5 do.
     List<Invoice> findTop5ByBusinessIdOrderByIssueDateDesc(java.util.UUID businessId);
+
+    // Sare invoices fetch karega , new to older fshion mei
+    List<Invoice> findAllByBusinessIdOrderByIssueDateDesc(java.util.UUID businessId);
 }

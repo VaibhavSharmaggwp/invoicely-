@@ -36,17 +36,16 @@ public class InvoiceController {
     }
 
     @GetMapping
-    public ResponseEntity<List<InvoiceResponseDTO>> getMyInvoices() {
-
-        // 1. JWT token se user ka email nikalo
+    public ResponseEntity<List<RecentInvoiceDTO>> getAllInvoices() {
+        // 1. Extract authenticated user's email from SecurityContext (JWT token)
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userEmail = authentication.getName();
 
-        // 2. Service ko call karo saari invoices lane ke liye
-        List<InvoiceResponseDTO> myInvoices = invoiceService.getAllMyInvoices(userEmail);
+        // 2. Fetch all invoices for the authenticated business (ensuring tenant isolation)
+        List<RecentInvoiceDTO> response = invoiceService.getAllInvoices(userEmail);
 
-        // 3. 200 OK ke sath list wapas bhej do
-        return ResponseEntity.ok(myInvoices);
+        // 3. Return 200 OK with the invoices list
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("dashboard-summary")
@@ -93,5 +92,4 @@ public class InvoiceController {
 
         return ResponseEntity.ok().build();
     }
-
 }

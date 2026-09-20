@@ -1,22 +1,15 @@
 package com.example.invoicely.ui.theme
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -26,138 +19,147 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.example.invoicely.network.DashboardSummaryResponse
-import com.example.invoicely.network.RecentInvoiceDto
-import com.example.invoicely.state.DashboardUiState
 
 @Composable
 fun MainScaffold(
-    onNewInvoiceClick: () -> Unit = {},
-    onLogoutClick: () -> Unit = {},
-    dashboardContent: @Composable () -> Unit = {
-        Text("Dashboard Content", modifier = Modifier.padding(16.dp))
-    }
+    currentRoute: String, // Tracks which screen the user is currently on
+    onNavigate: (String) -> Unit, // Handles bottom bar tab clicks
+    onNewInvoiceClick: (() -> Unit)? = null, // Optional FAB action
+    content: @Composable () -> Unit // Screen's active content
 ) {
-    var selectedItem by remember { mutableIntStateOf(0) }
-    val items = listOf("Home", "Invoices", "Reports", "Settings")
-    val icons = listOf(
-        Icons.Filled.Home,
-        Icons.AutoMirrored.Filled.List,
-        Icons.AutoMirrored.Filled.List,
-        Icons.Filled.Settings
-    )
+    val inkColor = Color(0xFF151A11)
+    val chartreuseColor = Color(0xFFDCEF3C)
+    val canvasBg = Color(0xFFF6F5EC)
 
     Scaffold(
-        containerColor = Color(0xFFF6F5EC),
         bottomBar = {
             NavigationBar(
-                containerColor = Color(0xFFF6F5EC),
+                containerColor = Color.White,
                 tonalElevation = 8.dp
             ) {
-                items.forEachIndexed { index, item ->
-                    NavigationBarItem(
-                        icon = { Icon(icons[index], contentDescription = item) },
-                        label = { Text(item) },
-                        selected = selectedItem == index,
-                        onClick = { selectedItem = index },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = Color.White,
-                            selectedTextColor = Ink,
-                            indicatorColor = Ink
+                // 1. Dashboard Tab
+                NavigationBarItem(
+                    selected = currentRoute == "dashboard",
+                    onClick = { onNavigate("dashboard") },
+                    icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
+                    label = {
+                        Text(
+                            text = "Home",
+                            fontFamily = OutfitFontFamily,
+                            fontWeight = if (currentRoute == "dashboard") FontWeight.Bold else FontWeight.Medium
                         )
+                    },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = inkColor,
+                        selectedTextColor = inkColor,
+                        indicatorColor = chartreuseColor.copy(alpha = 0.5f),
+                        unselectedIconColor = Color.Gray,
+                        unselectedTextColor = Color.Gray
                     )
-                }
+                )
+
+                // 2. Ledger / Invoices Tab
+                NavigationBarItem(
+                    selected = currentRoute == "ledger",
+                    onClick = { onNavigate("ledger") },
+                    icon = { Icon(Icons.AutoMirrored.Filled.ReceiptLong, contentDescription = "Ledger") },
+                    label = {
+                        Text(
+                            text = "Invoices",
+                            fontFamily = OutfitFontFamily,
+                            fontWeight = if (currentRoute == "ledger") FontWeight.Bold else FontWeight.Medium
+                        )
+                    },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = inkColor,
+                        selectedTextColor = inkColor,
+                        indicatorColor = chartreuseColor.copy(alpha = 0.5f),
+                        unselectedIconColor = Color.Gray,
+                        unselectedTextColor = Color.Gray
+                    )
+                )
+
+                // 3. History Tab
+                NavigationBarItem(
+                    selected = currentRoute == "history",
+                    onClick = { onNavigate("history") },
+                    icon = { Icon(Icons.Default.History, contentDescription = "History") },
+                    label = {
+                        Text(
+                            text = "History",
+                            fontFamily = OutfitFontFamily,
+                            fontWeight = if (currentRoute == "history") FontWeight.Bold else FontWeight.Medium
+                        )
+                    },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = inkColor,
+                        selectedTextColor = inkColor,
+                        indicatorColor = chartreuseColor.copy(alpha = 0.5f),
+                        unselectedIconColor = Color.Gray,
+                        unselectedTextColor = Color.Gray
+                    )
+                )
+
+                // 4. Settings Tab
+                NavigationBarItem(
+                    selected = currentRoute == "settings",
+                    onClick = { onNavigate("settings") },
+                    icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
+                    label = {
+                        Text(
+                            text = "Settings",
+                            fontFamily = OutfitFontFamily,
+                            fontWeight = if (currentRoute == "settings") FontWeight.Bold else FontWeight.Medium
+                        )
+                    },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = inkColor,
+                        selectedTextColor = inkColor,
+                        indicatorColor = chartreuseColor.copy(alpha = 0.5f),
+                        unselectedIconColor = Color.Gray,
+                        unselectedTextColor = Color.Gray
+                    )
+                )
             }
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = onNewInvoiceClick,
-                containerColor = Chartreuse,
-                contentColor = Ink,
-                shape = CircleShape
-            ) {
-                Icon(Icons.Filled.Add, contentDescription = "New Invoice")
+            if (onNewInvoiceClick != null) {
+                FloatingActionButton(
+                    onClick = onNewInvoiceClick,
+                    containerColor = chartreuseColor,
+                    contentColor = inkColor,
+                    shape = CircleShape
+                ) {
+                    Icon(Icons.Filled.Add, contentDescription = "New Invoice")
+                }
             }
         },
-        floatingActionButtonPosition = FabPosition.Center
+        containerColor = canvasBg
     ) { innerPadding ->
         Box(
             modifier = Modifier
-                .padding(innerPadding)
                 .fillMaxSize()
+                .padding(innerPadding)
         ) {
-            when (selectedItem) {
-                0 -> dashboardContent()
-                1 -> Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("Invoices Screen", color = Ink)
-                }
-                2 -> Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("Reports Screen", color = Ink)
-                }
-                3 -> Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text("Settings", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Ink)
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Button(
-                        onClick = onLogoutClick,
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFD32F2F),
-                            contentColor = Color.White
-                        )
-                    ) {
-                        Text("Log Out", fontWeight = FontWeight.SemiBold)
-                    }
-                }
-            }
+            content()
         }
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFFF6F5EC)
+@Preview(showBackground = true)
 @Composable
 fun MainScaffoldPreview() {
     MaterialTheme {
         MainScaffold(
-            dashboardContent = {
-                val mockData = DashboardSummaryResponse(
-                    revenueThisMonth = 384600.0,
-                    revenueGrowthPercentage = 18.4,
-                    receivedAmount = 268200.0,
-                    receivedCount = 14,
-                    outstandingAmount = 116400.0,
-                    outstandingCount = 5,
-                    overdueCount = 2,
-                    recentInvoices = listOf(
-                        RecentInvoiceDto("1", "INV-013", "Halcyon Hotels", 96400.0, "ISSUED"),
-                        RecentInvoiceDto("2", "INV-012", "Nexus Tech", 45000.0, "PAID"),
-                        RecentInvoiceDto("3", "INV-011", "Vertex Group", 12000.0, "OVERDUE")
-                    )
-                )
-                DashboardScreen(uiState = DashboardUiState.Success(mockData))
-            }
-        )
+            currentRoute = "dashboard",
+            onNavigate = {}
+        ) {
+            Text("Dashboard Content", modifier = Modifier.padding(16.dp))
+        }
     }
 }

@@ -41,4 +41,9 @@ interface ApiService {
         @Path("id") invoiceId: String,
         @Body request: RecordPaymentRequest
     ): Response<Unit>
+
+    @GET("/api/v1/invoices")
+    suspend fun getAllInvoices(
+        @Header("Authorization") authHeader: String
+    ): Response<List<RecentInvoiceDto>>
 }
