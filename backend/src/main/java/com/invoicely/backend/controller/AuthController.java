@@ -20,7 +20,7 @@ public class AuthController {
     private final JwtService jwtService;
 
     @PostMapping("/register")
-    public ResponseEntity<AuthResponseDTO> register(@RequestBody AuthRequestDTO requestDTO) {
+    public ResponseEntity<AuthResponseDTO> register(@Valid @RequestBody AuthRequestDTO requestDTO) {
         AuthResponseDTO response = authService.register(requestDTO);
         return ResponseEntity.ok(response);
     }

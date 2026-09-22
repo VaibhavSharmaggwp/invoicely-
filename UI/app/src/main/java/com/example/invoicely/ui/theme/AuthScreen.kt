@@ -18,13 +18,17 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Business
 import androidx.compose.material.icons.outlined.CheckCircle
@@ -192,9 +196,11 @@ fun AuthScreen(
     var isLoginMode by remember { mutableStateOf(true) }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
     var businessName by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var isPasswordVisible by remember { mutableStateOf(false) }
+    var isConfirmPasswordVisible by remember { mutableStateOf(false) }
 
     // Toast States
     var toastMessage by remember { mutableStateOf<String?>(null) }
@@ -205,6 +211,7 @@ fun AuthScreen(
     LaunchedEffect(Unit) {
         viewModel.resetAuthState()
         password = ""
+        confirmPassword = ""
     }
 
     // Trigger Error Toast on Error State Update
@@ -243,13 +250,22 @@ fun AuthScreen(
             .fillMaxSize()
             .background(canvasColor)
     ) {
-        // Center Form Content
+        val scrollState = rememberScrollState()
+
+        LaunchedEffect(isLoginMode) {
+            scrollState.animateScrollTo(0)
+        }
+
+        // Scrollable Form Content
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .imePadding()
+                .verticalScroll(scrollState)
+                .padding(horizontal = 24.dp, vertical = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // App Brand Logo Badge
             Box(
@@ -304,7 +320,11 @@ fun AuthScreen(
                         .fillMaxSize()
                         .clip(RoundedCornerShape(20.dp))
                         .background(if (isLoginMode) inkColor else Color.Transparent)
-                        .clickable { isLoginMode = true },
+                        .clickable {
+                            isLoginMode = true
+                            password = ""
+                            confirmPassword = ""
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -321,7 +341,11 @@ fun AuthScreen(
                         .fillMaxSize()
                         .clip(RoundedCornerShape(20.dp))
                         .background(if (!isLoginMode) inkColor else Color.Transparent)
-                        .clickable { isLoginMode = false },
+                        .clickable {
+                            isLoginMode = false
+                            password = ""
+                            confirmPassword = ""
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -435,7 +459,7 @@ fun AuthScreen(
                     OutlinedTextField(
                         value = password,
                         onValueChange = { password = it },
-                        label = { Text("Password") },
+                        label = { Text(if (isLoginMode) "Password" else "Create Password") },
                         leadingIcon = {
                             Icon(Icons.Outlined.Lock, contentDescription = null, tint = inkColor.copy(alpha = 0.6f))
                         },
@@ -464,21 +488,80 @@ fun AuthScreen(
                         )
                     )
 
+                    // Strength Meter & Confirm Password (Sign Up Mode)
+                    AnimatedVisibility(
+                        visible = !isLoginMode,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            // 🚀 Drop the strength meter right under the password field!
+                            PasswordStrengthIndicator(password = password)
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            OutlinedTextField(
+                                value = confirmPassword,
+                                onValueChange = { confirmPassword = it },
+                                label = { Text("Confirm Password") },
+                                leadingIcon = {
+                                    Icon(Icons.Outlined.Lock, contentDescription = null, tint = inkColor.copy(alpha = 0.6f))
+                                },
+                                trailingIcon = {
+                                    IconButton(onClick = { isConfirmPasswordVisible = !isConfirmPasswordVisible }) {
+                                        Icon(
+                                            imageVector = if (isConfirmPasswordVisible) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
+                                            contentDescription = "Toggle Confirm Password Visibility",
+                                            tint = inkColor.copy(alpha = 0.6f)
+                                        )
+                                    }
+                                },
+                                singleLine = true,
+                                visualTransformation = if (isConfirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                shape = RoundedCornerShape(16.dp),
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedTextColor = inkColor,
+                                    unfocusedTextColor = inkColor,
+                                    focusedBorderColor = inkColor,
+                                    unfocusedBorderColor = mutedBorderColor,
+                                    cursorColor = inkColor,
+                                    focusedLabelColor = inkColor,
+                                    unfocusedLabelColor = Color.Gray
+                                )
+                            )
+
+                            // 🚀 Drop the match checker right under the confirm field!
+                            PasswordMatchIndicator(password = password, confirmPassword = confirmPassword)
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(24.dp))
+
+                    val isSubmitEnabled = if (isLoginMode) {
+                        !viewModel.isLoading.value
+                    } else {
+                        !viewModel.isLoading.value &&
+                        calculatePasswordStrength(password) == PasswordStrength.STRONG &&
+                        password == confirmPassword
+                    }
 
                     // Primary Action Button
                     Button(
                         onClick = {
                             viewModel.authenticate(isLoginMode, email, password, businessName, phone)
                         },
-                        enabled = !viewModel.isLoading.value,
+                        enabled = isSubmitEnabled,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(52.dp),
                         shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = chartreuseColor,
-                            contentColor = inkColor
+                            contentColor = inkColor,
+                            disabledContainerColor = chartreuseColor.copy(alpha = 0.4f),
+                            disabledContentColor = inkColor.copy(alpha = 0.4f)
                         )
                     ) {
                         if (viewModel.isLoading.value) {
@@ -555,7 +638,11 @@ fun AuthScreen(
             Spacer(modifier = Modifier.height(20.dp))
 
             // Footer Switcher Text
-            TextButton(onClick = { isLoginMode = !isLoginMode }) {
+            TextButton(onClick = {
+                isLoginMode = !isLoginMode
+                password = ""
+                confirmPassword = ""
+            }) {
                 Text(
                     text = if (isLoginMode) "Don't have an account? Sign up" else "Already have an account? Log in",
                     color = inkColor,
