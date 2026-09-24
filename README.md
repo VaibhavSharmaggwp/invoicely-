@@ -105,6 +105,7 @@ While the primary focus is backend mastery, Invoicely includes a production-grad
 - **Financial Ledger Screen (`HistoryScreen.kt`)**: Displays real-time settled inflow hero metrics, live ledger tags, client search, filter chips (`ALL`, `SETTLED`, `ISSUED`, `OVERDUE`), and interactive transaction receipt bottom sheets with direct navigation to related invoices.
 - **Bento Financial Dashboard**: High-contrast, card-based dashboard showing monthly revenue, settled vs. outstanding volume, and quick action workflows.
 - **Digital Paper Receipt**: Perforated digital voucher view with dash-path Canvas borders, dynamic payment links, and native Android sharing (`Intent.ACTION_SEND`).
+- **Authentication & Onboarding (`AuthScreen.kt`)**: Polished authentication flow featuring real-time password strength evaluation, match validation, and Google OAuth 2.0 integration.
 - **Reactive MVI Architecture**: Powered by ViewModels, Kotlin Coroutines, and Retrofit 2 with zero mock data—every screen binds directly to live Spring Boot REST endpoints.
 
 ---
