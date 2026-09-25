@@ -240,37 +240,14 @@ fun AppNavigation() {
                         }
                     }
                     "settings" -> {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Text(
-                                text = "Settings",
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Bold,
-                                fontFamily = OutfitFontFamily,
-                                color = Color(0xFF151A11)
-                            )
-                            Spacer(modifier = Modifier.height(24.dp))
-                            Button(
-                                onClick = {
-                                    tokenManager.clearToken()
-                                    navController.navigate("auth") {
-                                        popUpTo("main") { inclusive = true }
-                                    }
-                                },
-                                shape = RoundedCornerShape(16.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFFD32F2F),
-                                    contentColor = Color.White
-                                )
-                            ) {
-                                Text("Log Out", fontFamily = OutfitFontFamily, fontWeight = FontWeight.SemiBold)
+                        SettingsScreen(
+                            onLogoutClick = {
+                                tokenManager.clearToken()
+                                navController.navigate("auth") {
+                                    popUpTo("main") { inclusive = true }
+                                }
                             }
-                        }
+                        )
                     }
                 }
             }
