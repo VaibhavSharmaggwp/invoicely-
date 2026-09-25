@@ -93,3 +93,21 @@ data class HistoryEventDto(
     val time: String = "",
     val date: String = ""
 )
+
+data class BusinessProfileDto(
+    // Company Details
+    val legalEntityName: String? = "",
+    val tradeName: String? = "",
+    val gstin: String? = "",
+    val contactEmail: String? = "",
+    val contactPhone: String? = "",
+    val registeredAddress: String? = "",
+    val pinCode: String? = "",
+
+    // Bank Details
+    val accountHolderName: String? = "",
+    val bankName: String? = "",
+    val accountNumber: String? = "",
+    val ifscCode: String? = "",
+    val upiVpa: String? = ""
+)

@@ -5,6 +5,7 @@ import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
+import retrofit2.http.PUT
 import retrofit2.http.Path
 
 interface ApiService {
@@ -51,4 +52,14 @@ interface ApiService {
     suspend fun getActivityHistory(
         @Header("Authorization") authHeader: String
     ): Response<List<HistoryEventDto>>
+
+    @GET("/api/v1/business/profile")
+    suspend fun getBusinessProfile(@Header("Authorization") authHeader: String): Response<BusinessProfileDto>
+
+    @PUT("api/v1/business/profile")
+    suspend fun updateBusinessProfile(
+        @Header("Authorization") authHeader: String,
+        @Body profile: BusinessProfileDto
+    ): Response<Unit>
+
 }

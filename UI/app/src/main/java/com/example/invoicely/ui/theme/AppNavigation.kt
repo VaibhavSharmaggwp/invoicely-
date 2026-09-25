@@ -18,6 +18,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,10 +47,20 @@ import com.example.invoicely.viewmodel.InvoicesListViewModelFactory
 import com.example.invoicely.viewmodel.HistoryViewModel
 import com.example.invoicely.viewmodel.HistoryViewModelFactory
 import com.example.invoicely.viewmodel.HistoryUiState
+import com.example.invoicely.network.BusinessProfileDto
+import com.example.invoicely.viewmodel.SettingsViewModel
+import com.example.invoicely.viewmodel.SettingsViewModelFactory
+import com.example.invoicely.viewmodel.ProfileUiState
+import kotlinx.coroutines.launch
 
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
+    val context = LocalContext.current
+    val tokenManager = remember { TokenManager(context) }
+    val coroutineScope = rememberCoroutineScope()
+    val settingsFactory = remember { SettingsViewModelFactory(tokenManager) }
+    val settingsViewModel: SettingsViewModel = viewModel(factory = settingsFactory)
 
     NavHost(navController = navController, startDestination = "splash") {
 
@@ -240,7 +251,29 @@ fun AppNavigation() {
                         }
                     }
                     "settings" -> {
+                        LaunchedEffect(Unit) {
+                            settingsViewModel.fetchProfile()
+                        }
+
+                        val profileState = settingsViewModel.uiState.value
+                        val currentProfile = (profileState as? ProfileUiState.Success)?.profile
+
+                        val displayName = currentProfile?.tradeName?.takeIf { it.isNotBlank() }
+                            ?: currentProfile?.legalEntityName?.takeIf { it.isNotBlank() }
+                            ?: "Vaibhav Sharma"
+
+                        val displayBusiness = currentProfile?.legalEntityName?.takeIf { it.isNotBlank() }
+                            ?: "Invoicely HQ"
+
                         SettingsScreen(
+                            userName = displayName,
+                            businessName = displayBusiness,
+                            onNavigateToCompanyDetails = {
+                                navController.navigate("company_details")
+                            },
+                            onNavigateToBankUpi = {
+                                navController.navigate("bank_and_upi")
+                            },
                             onLogoutClick = {
                                 tokenManager.clearToken()
                                 navController.navigate("auth") {
@@ -294,6 +327,87 @@ fun AppNavigation() {
                 },
                 onPaymentSuccess = {
                     viewModel.fetchInvoiceDetails(invoiceId)
+                }
+            )
+        }
+
+        composable("company_details") {
+            LaunchedEffect(Unit) {
+                settingsViewModel.fetchProfile()
+            }
+
+            val currentState = settingsViewModel.uiState.value
+            val profile = (currentState as? ProfileUiState.Success)?.profile ?: BusinessProfileDto()
+
+            val uiState = CompanyProfileState(
+                legalEntityName = profile.legalEntityName ?: "",
+                tradeName = profile.tradeName ?: "",
+                gstin = profile.gstin ?: "",
+                contactEmail = profile.contactEmail ?: "",
+                contactPhone = profile.contactPhone ?: "",
+                registeredAddress = profile.registeredAddress ?: "",
+                pinCode = profile.pinCode ?: ""
+            )
+
+            CompanyDetailsScreen(
+                initialState = uiState,
+                onBackClick = { navController.popBackStack() },
+                onSaveProfile = { updatedUiState ->
+                    // Merge updated UI state with existing Bank details so we don't overwrite Bank data
+                    val mergedDto = profile.copy(
+                        legalEntityName = updatedUiState.legalEntityName ?: "",
+                        tradeName = updatedUiState.tradeName ?: "",
+                        gstin = updatedUiState.gstin ?: "",
+                        contactEmail = updatedUiState.contactEmail ?: "",
+                        contactPhone = updatedUiState.contactPhone ?: "",
+                        registeredAddress = updatedUiState.registeredAddress ?: "",
+                        pinCode = updatedUiState.pinCode ?: ""
+                    )
+
+                    coroutineScope.launch {
+                        val success = settingsViewModel.updateProfile(mergedDto)
+                        if (success) {
+                            navController.popBackStack()
+                        }
+                    }
+                }
+            )
+        }
+
+        composable("bank_and_upi") {
+            LaunchedEffect(Unit) {
+                settingsViewModel.fetchProfile()
+            }
+
+            val currentState = settingsViewModel.uiState.value
+            val profile = (currentState as? ProfileUiState.Success)?.profile ?: BusinessProfileDto()
+
+            val bankState = BankAndUpiState(
+                accountHolderName = profile.accountHolderName ?: "",
+                bankName = profile.bankName ?: "",
+                accountNumber = profile.accountNumber ?: "",
+                ifscCode = profile.ifscCode ?: "",
+                upiVpa = profile.upiVpa ?: ""
+            )
+
+            BankAndUpiScreen(
+                initialState = bankState,
+                onBackClick = { navController.popBackStack() },
+                onSavePaymentDetails = { updatedBankState ->
+                    val mergedDto = profile.copy(
+                        accountHolderName = updatedBankState.accountHolderName ?: "",
+                        bankName = updatedBankState.bankName ?: "",
+                        accountNumber = updatedBankState.accountNumber ?: "",
+                        ifscCode = updatedBankState.ifscCode ?: "",
+                        upiVpa = updatedBankState.upiVpa ?: ""
+                    )
+
+                    coroutineScope.launch {
+                        val success = settingsViewModel.updateProfile(mergedDto)
+                        if (success) {
+                            navController.popBackStack()
+                        }
+                    }
                 }
             )
         }

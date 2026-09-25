@@ -52,6 +52,9 @@ import androidx.compose.ui.unit.sp
 fun SettingsScreen(
     userName: String = "Vaibhav Sharma", // Will come from ViewModel later
     businessName: String = "Invoicely HQ",
+    onNavigateToCompanyDetails: () -> Unit = {},
+    onNavigateToBankUpi: () -> Unit = {},
+
     onLogoutClick: () -> Unit
 ){
     val canvasBg = Color(0xFFF6F5EC)
@@ -173,13 +176,16 @@ fun SettingsScreen(
                     SettingsRow(
                         icon = Icons.Outlined.Business,
                         title = "Company Details",
-                        subtitle = "Logo, GSTIN, Address"
+                        subtitle = "Logo, GSTIN, Address",
+                        onClick =onNavigateToCompanyDetails
                     )
                     HorizontalDivider(color = Color(0xFFF6F5EC), thickness = 1.dp)
                     SettingsRow(
                         icon = Icons.Outlined.AccountBalance,
                         title = "Bank & UPI Links",
-                        subtitle = "Default payment methods"
+                        subtitle = "Beneficiary IFSC, A/C & VPA settlement rail",
+                        onClick = onNavigateToBankUpi
+
                     )
                 }
             }
