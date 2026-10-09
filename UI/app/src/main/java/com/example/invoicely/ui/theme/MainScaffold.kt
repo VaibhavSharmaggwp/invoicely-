@@ -38,94 +38,10 @@ fun MainScaffold(
 
     Scaffold(
         bottomBar = {
-            NavigationBar(
-                containerColor = Color.White,
-                tonalElevation = 8.dp
-            ) {
-                // 1. Dashboard Tab
-                NavigationBarItem(
-                    selected = currentRoute == "dashboard",
-                    onClick = { onNavigate("dashboard") },
-                    icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
-                    label = {
-                        Text(
-                            text = "Home",
-                            fontFamily = OutfitFontFamily,
-                            fontWeight = if (currentRoute == "dashboard") FontWeight.Bold else FontWeight.Medium
-                        )
-                    },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = inkColor,
-                        selectedTextColor = inkColor,
-                        indicatorColor = chartreuseColor.copy(alpha = 0.5f),
-                        unselectedIconColor = Color.Gray,
-                        unselectedTextColor = Color.Gray
-                    )
-                )
-
-                // 2. Ledger / Invoices Tab
-                NavigationBarItem(
-                    selected = currentRoute == "ledger",
-                    onClick = { onNavigate("ledger") },
-                    icon = { Icon(Icons.AutoMirrored.Filled.ReceiptLong, contentDescription = "Ledger") },
-                    label = {
-                        Text(
-                            text = "Invoices",
-                            fontFamily = OutfitFontFamily,
-                            fontWeight = if (currentRoute == "ledger") FontWeight.Bold else FontWeight.Medium
-                        )
-                    },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = inkColor,
-                        selectedTextColor = inkColor,
-                        indicatorColor = chartreuseColor.copy(alpha = 0.5f),
-                        unselectedIconColor = Color.Gray,
-                        unselectedTextColor = Color.Gray
-                    )
-                )
-
-                // 3. History Tab
-                NavigationBarItem(
-                    selected = currentRoute == "history",
-                    onClick = { onNavigate("history") },
-                    icon = { Icon(Icons.Default.History, contentDescription = "History") },
-                    label = {
-                        Text(
-                            text = "History",
-                            fontFamily = OutfitFontFamily,
-                            fontWeight = if (currentRoute == "history") FontWeight.Bold else FontWeight.Medium
-                        )
-                    },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = inkColor,
-                        selectedTextColor = inkColor,
-                        indicatorColor = chartreuseColor.copy(alpha = 0.5f),
-                        unselectedIconColor = Color.Gray,
-                        unselectedTextColor = Color.Gray
-                    )
-                )
-
-                // 4. Settings Tab
-                NavigationBarItem(
-                    selected = currentRoute == "settings",
-                    onClick = { onNavigate("settings") },
-                    icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
-                    label = {
-                        Text(
-                            text = "Settings",
-                            fontFamily = OutfitFontFamily,
-                            fontWeight = if (currentRoute == "settings") FontWeight.Bold else FontWeight.Medium
-                        )
-                    },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = inkColor,
-                        selectedTextColor = inkColor,
-                        indicatorColor = chartreuseColor.copy(alpha = 0.5f),
-                        unselectedIconColor = Color.Gray,
-                        unselectedTextColor = Color.Gray
-                    )
-                )
-            }
+            FluidBottomBar(
+                currentRoute = currentRoute,
+                onNavigate = onNavigate
+            )
         },
         floatingActionButton = {
             if (onNewInvoiceClick != null) {
@@ -133,7 +49,8 @@ fun MainScaffold(
                     onClick = onNewInvoiceClick,
                     containerColor = chartreuseColor,
                     contentColor = inkColor,
-                    shape = CircleShape
+                    shape = CircleShape,
+                    modifier = Modifier.padding(bottom = 4.dp)
                 ) {
                     Icon(Icons.Filled.Add, contentDescription = "New Invoice")
                 }

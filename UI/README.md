@@ -66,6 +66,17 @@ com.example.invoicely/
 - Real-time password strength analyzer with criterion checklists.
 - Native Google OAuth 2.0 Credential Manager integration.
 
+### 8. 💧 Fluid Liquid Bottom Navigation (`FluidBottomBar.kt`)
+- **Liquid Selection Indicator**: Dual-spring physics (`headProgress` + `tailProgress`) creating viscous momentum stretch, horizontal elongation, and bouncy rebound.
+- **Per-Tab Signature Palettes**: Continuous color interpolation blending smoothly between tabs:
+  - **Home**: Chartreuse (`#DCEF3C`) & Lime (`#A3E635`)
+  - **Invoices**: Mint Teal (`#2DD4BF`) & Emerald (`#10B981`)
+  - **History**: Solar Gold (`#FBBF24`) & Amber (`#F59E0B`)
+  - **Settings**: Titanium Violet (`#A78BFA`) & Indigo (`#818CF8`)
+- **Radial Ambient Halo**: Diffused radial glow spreading across the obsidian dock surface.
+- **Drag to Select**: Interactive horizontal gestures allowing users to glide across the dock and snap to tabs with momentum.
+- **Sculpted Obsidian Dock**: Floating rounded capsule (`34.dp` radius) elevated over the warm paper Canvas background.
+
 ---
 
 ## 🚀 Getting Started
