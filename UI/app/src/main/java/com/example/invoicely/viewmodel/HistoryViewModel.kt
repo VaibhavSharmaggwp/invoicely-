@@ -19,9 +19,11 @@ class HistoryViewModel(private val tokenManager: TokenManager) : ViewModel() {
     var uiState = mutableStateOf<HistoryUiState>(HistoryUiState.Loading)
         private set
 
-    fun fetchHistory() {
+    fun fetchHistory(forceLoadingIndicator: Boolean = false) {
         viewModelScope.launch {
-            uiState.value = HistoryUiState.Loading
+            if (forceLoadingIndicator || uiState.value !is HistoryUiState.Success) {
+                uiState.value = HistoryUiState.Loading
+            }
             try {
                 val token = tokenManager.getToken()
                 if (token.isNullOrBlank()) {

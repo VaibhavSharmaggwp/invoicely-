@@ -1,11 +1,15 @@
 package com.example.invoicely.ui.theme
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -13,6 +17,7 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -21,8 +26,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
@@ -39,19 +47,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlin.math.absoluteValue
 import kotlin.math.max
 import kotlin.math.min
 
@@ -98,33 +100,10 @@ val defaultFluidTabs = listOf(
 )
 
 /**
- * Linear color interpolation helper
+ * Highly optimized, GPU-accelerated Fluid Liquid Bottom Bar
+ * Built with dual-spring momentum stretch physics, glowing liquid capsule,
+ * and tactile expand/contract micro-animations.
  */
-private fun lerpColor(c1: Color, c2: Color, fraction: Float): Color {
-    val f = fraction.coerceIn(0f, 1f)
-    return Color(
-        red = c1.red + (c2.red - c1.red) * f,
-        green = c1.green + (c2.green - c1.green) * f,
-        blue = c1.blue + (c2.blue - c1.blue) * f,
-        alpha = c1.alpha + (c2.alpha - c1.alpha) * f
-    )
-}
-
-/**
- * Helper to interpolate tab colors based on continuous float index
- */
-private fun interpolateColorForProgress(tabs: List<FluidTab>, progress: Float, isPrimary: Boolean): Color {
-    if (tabs.isEmpty()) return Color.White
-    val clamped = progress.coerceIn(0f, (tabs.size - 1).toFloat())
-    val lowerIndex = clamped.toInt()
-    val upperIndex = (lowerIndex + 1).coerceAtMost(tabs.size - 1)
-    val fraction = clamped - lowerIndex
-
-    val color1 = if (isPrimary) tabs[lowerIndex].primaryAccent else tabs[lowerIndex].secondaryAccent
-    val color2 = if (isPrimary) tabs[upperIndex].primaryAccent else tabs[upperIndex].secondaryAccent
-    return lerpColor(color1, color2, fraction)
-}
-
 @Composable
 fun FluidBottomBar(
     currentRoute: String,
@@ -137,84 +116,81 @@ fun FluidBottomBar(
         if (idx >= 0) idx else 0
     }
 
-    // 💧 LIQUID SELECTION PHYSICS:
-    // Leading edge (head) springs ahead with fast momentum,
-    // Trailing edge (tail) follows with elastic delay,
-    // producing momentum stretch and wobble.
-    val headProgress by animateFloatAsState(
+    val activeTab = tabs.getOrElse(activeIndex) { tabs.first() }
+
+    // 💧 DUAL-SPRING LIQUID MOMENTUM PHYSICS:
+    // Head moves fast with high stiffness,
+    // Tail follows with elastic delay,
+    // producing momentum stretch and silky organic rebound.
+    val headIndex by animateFloatAsState(
         targetValue = activeIndex.toFloat(),
         animationSpec = spring(
-            dampingRatio = 0.64f, // Dynamic wobble
-            stiffness = 420f      // Swift momentum
+            dampingRatio = 0.70f,
+            stiffness = 380f
         ),
         label = "fluidHead"
     )
 
-    val tailProgress by animateFloatAsState(
+    val tailIndex by animateFloatAsState(
         targetValue = activeIndex.toFloat(),
         animationSpec = spring(
-            dampingRatio = 0.72f, // Elastic follow
-            stiffness = 270f      // Elastic drag
+            dampingRatio = 0.76f,
+            stiffness = 250f
         ),
         label = "fluidTail"
     )
 
-    // Current blended liquid palette colors based on fluid progress
-    val currentAccent = interpolateColorForProgress(tabs, headProgress, isPrimary = true)
-    val currentSecondary = interpolateColorForProgress(tabs, headProgress, isPrimary = false)
+    // Animated glow color transition
+    val activeAccent by animateColorAsState(
+        targetValue = activeTab.primaryAccent,
+        animationSpec = tween(durationMillis = 260),
+        label = "activeAccent"
+    )
 
-    // Design Tokens matching Invoicely
-    val dockBgColor = Color(0xFF141911)
-    val dockBorderColor = Color(0xFF263121)
-    val inactiveColor = Color(0xFF7E8679)
-
-    val density = LocalDensity.current
+    // Design Tokens
+    val dockBgColor = Color(0xFF131711)
+    val dockBorderColor = Color(0xFF242C1F)
+    val inactiveIconColor = Color(0xFF7E8679)
 
     Box(
         modifier = modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .padding(horizontal = 20.dp, vertical = 12.dp),
+            .padding(horizontal = 20.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center
     ) {
         // Floating Sculpted Dock Pill
-        Box(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(68.dp)
+                .height(62.dp)
                 .shadow(
-                    elevation = 14.dp,
-                    shape = RoundedCornerShape(34.dp),
-                    ambientColor = currentAccent.copy(alpha = 0.25f),
-                    spotColor = currentAccent.copy(alpha = 0.45f)
+                    elevation = 16.dp,
+                    shape = RoundedCornerShape(31.dp),
+                    ambientColor = activeAccent.copy(alpha = 0.20f),
+                    spotColor = activeAccent.copy(alpha = 0.35f)
                 )
-                .clip(RoundedCornerShape(34.dp))
+                .clip(RoundedCornerShape(31.dp))
                 .background(dockBgColor)
                 .border(
-                    width = 1.2.dp,
-                    brush = Brush.horizontalGradient(
-                        listOf(
-                            dockBorderColor,
-                            currentAccent.copy(alpha = 0.35f),
-                            dockBorderColor
-                        )
-                    ),
-                    shape = RoundedCornerShape(34.dp)
+                    width = 1.dp,
+                    color = dockBorderColor,
+                    shape = RoundedCornerShape(31.dp)
                 )
-                // 👆 DRAG-TO-SELECT GESTURE
+                // 👆 INTERACTIVE DRAG-TO-SELECT
                 .pointerInput(tabs) {
                     detectHorizontalDragGestures(
                         onDragStart = { offset ->
-                            val tabWidth = size.width / tabs.size
-                            val selectedIndex = (offset.x / tabWidth).toInt().coerceIn(0, tabs.size - 1)
+                            val tabWidthPx = size.width / tabs.size
+                            val selectedIndex = (offset.x / tabWidthPx).toInt().coerceIn(0, tabs.size - 1)
                             if (tabs[selectedIndex].route != currentRoute) {
                                 onNavigate(tabs[selectedIndex].route)
                             }
                         },
                         onHorizontalDrag = { change, _ ->
                             change.consume()
-                            val tabWidth = size.width / tabs.size
-                            val selectedIndex = (change.position.x / tabWidth).toInt().coerceIn(0, tabs.size - 1)
+                            val tabWidthPx = size.width / tabs.size
+                            val selectedIndex = (change.position.x / tabWidthPx).toInt().coerceIn(0, tabs.size - 1)
                             if (tabs[selectedIndex].route != currentRoute) {
                                 onNavigate(tabs[selectedIndex].route)
                             }
@@ -222,85 +198,71 @@ fun FluidBottomBar(
                     )
                 }
         ) {
-            // 💧 LIQUID BLOB CANVAS (Custom draw behind tabs)
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                val totalWidth = size.width
-                val tabCount = tabs.size
-                if (tabCount == 0) return@Canvas
-
+            val totalWidth = maxWidth
+            val tabCount = tabs.size
+            if (tabCount > 0) {
                 val tabWidth = totalWidth / tabCount
-                val headX = (headProgress + 0.5f) * tabWidth
-                val tailX = (tailProgress + 0.5f) * tabWidth
 
-                val minX = min(headX, tailX)
-                val maxX = max(headX, tailX)
+                // Momentum stretch math
+                val minIdx = min(headIndex, tailIndex)
+                val maxIdx = max(headIndex, tailIndex)
+                val stretchFactor = maxIdx - minIdx // 0.0 at rest, elongates during flight
 
                 val restingPillWidth = tabWidth * 0.74f
-                val restingPillHeight = 46.dp.toPx()
+                val pillWidth = restingPillWidth + tabWidth * (stretchFactor * 0.40f)
+                val pillHeight = 44.dp
 
-                // Calculate momentum stretch
-                val blobLeft = minX - restingPillWidth / 2f
-                val blobRight = maxX + restingPillWidth / 2f
-                val blobWidth = blobRight - blobLeft
+                val centerIdx = (headIndex + tailIndex) / 2f
+                val pillOffsetX = (tabWidth * centerIdx) + (tabWidth - pillWidth) / 2f
 
-                // Volume preservation: slight vertical squeeze during horizontal stretch
-                val stretchDistance = (maxX - minX).absoluteValue
-                val heightCompression = (stretchDistance / tabWidth * 4.dp.toPx()).coerceAtMost(5.dp.toPx())
-                val blobHeight = restingPillHeight - heightCompression
-
-                val blobTop = (size.height - blobHeight) / 2f
-                val blobCenter = Offset((blobLeft + blobRight) / 2f, size.height / 2f)
-
-                // 1. Soft radial fluid glow halo
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        colors = listOf(
-                            currentAccent.copy(alpha = 0.28f),
-                            currentAccent.copy(alpha = 0.08f),
-                            Color.Transparent
-                        ),
-                        center = blobCenter,
-                        radius = blobWidth * 0.9f
-                    ),
-                    center = blobCenter,
-                    radius = blobWidth * 0.9f
+                // 💧 1. AMBIENT GLOW BACKDROP
+                Box(
+                    modifier = Modifier
+                        .offset(x = pillOffsetX - 10.dp, y = (62.dp - (pillHeight + 10.dp)) / 2)
+                        .width(pillWidth + 20.dp)
+                        .height(pillHeight + 10.dp)
+                        .background(
+                            brush = Brush.radialGradient(
+                                colors = listOf(
+                                    activeAccent.copy(alpha = 0.25f),
+                                    Color.Transparent
+                                )
+                            ),
+                            shape = RoundedCornerShape((pillHeight + 10.dp) / 2)
+                        )
                 )
 
-                // 2. Liquid Capsule Body
-                drawRoundRect(
-                    brush = Brush.horizontalGradient(
-                        colors = listOf(
-                            currentSecondary.copy(alpha = 0.22f),
-                            currentAccent.copy(alpha = 0.32f),
-                            currentSecondary.copy(alpha = 0.22f)
-                        ),
-                        startX = blobLeft,
-                        endX = blobRight
-                    ),
-                    topLeft = Offset(blobLeft, blobTop),
-                    size = Size(blobWidth, blobHeight),
-                    cornerRadius = CornerRadius(blobHeight / 2f, blobHeight / 2f)
-                )
-
-                // 3. Subtle luminous edge ring
-                drawRoundRect(
-                    brush = Brush.horizontalGradient(
-                        colors = listOf(
-                            currentSecondary.copy(alpha = 0.55f),
-                            currentAccent.copy(alpha = 0.85f),
-                            currentSecondary.copy(alpha = 0.55f)
-                        ),
-                        startX = blobLeft,
-                        endX = blobRight
-                    ),
-                    topLeft = Offset(blobLeft, blobTop),
-                    size = Size(blobWidth, blobHeight),
-                    cornerRadius = CornerRadius(blobHeight / 2f, blobHeight / 2f),
-                    style = Stroke(width = 1.2.dp.toPx())
+                // 💧 2. LIQUID SELECTION CAPSULE BODY
+                Box(
+                    modifier = Modifier
+                        .offset(x = pillOffsetX, y = (62.dp - pillHeight) / 2)
+                        .width(pillWidth)
+                        .height(pillHeight)
+                        .clip(RoundedCornerShape(pillHeight / 2))
+                        .background(
+                            brush = Brush.horizontalGradient(
+                                listOf(
+                                    activeTab.secondaryAccent.copy(alpha = 0.16f),
+                                    activeAccent.copy(alpha = 0.22f),
+                                    activeTab.secondaryAccent.copy(alpha = 0.16f)
+                                )
+                            )
+                        )
+                        .border(
+                            width = 1.dp,
+                            brush = Brush.horizontalGradient(
+                                listOf(
+                                    activeTab.secondaryAccent.copy(alpha = 0.45f),
+                                    activeAccent.copy(alpha = 0.75f),
+                                    activeTab.secondaryAccent.copy(alpha = 0.45f)
+                                )
+                            ),
+                            shape = RoundedCornerShape(pillHeight / 2)
+                        )
                 )
             }
 
-            // 4. TAB ICONS & MICRO-TYPOGRAPHY
+            // 3. TAB ICONS & DYNAMIC REVEAL LABELS
             Row(
                 modifier = Modifier.fillMaxSize(),
                 horizontalArrangement = Arrangement.SpaceEvenly,
@@ -310,18 +272,12 @@ fun FluidBottomBar(
                     val isSelected = index == activeIndex
 
                     val iconScale by animateFloatAsState(
-                        targetValue = if (isSelected) 1.16f else 1.0f,
+                        targetValue = if (isSelected) 1.14f else 1.0f,
                         animationSpec = spring(
                             dampingRatio = Spring.DampingRatioLowBouncy,
                             stiffness = Spring.StiffnessMedium
                         ),
                         label = "iconScale_$index"
-                    )
-
-                    val itemColor by animateColorAsState(
-                        targetValue = if (isSelected) tab.primaryAccent else inactiveColor,
-                        animationSpec = tween(durationMillis = 240),
-                        label = "tabColor_$index"
                     )
 
                     Box(
@@ -343,20 +299,39 @@ fun FluidBottomBar(
                             Icon(
                                 imageVector = tab.icon,
                                 contentDescription = tab.label,
-                                tint = itemColor,
+                                tint = if (isSelected) activeAccent else inactiveIconColor,
                                 modifier = Modifier
                                     .size(22.dp)
                                     .scale(iconScale)
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = tab.label,
-                                color = itemColor,
-                                fontSize = 11.sp,
-                                fontFamily = OutfitFontFamily,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                letterSpacing = if (isSelected) 0.3.sp else 0.sp
-                            )
+
+                            // Label and glowing pip expand dynamically when active
+                            AnimatedVisibility(
+                                visible = isSelected,
+                                enter = fadeIn(tween(160)) + expandVertically(tween(160)),
+                                exit = fadeOut(tween(120)) + shrinkVertically(tween(120))
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = tab.label,
+                                        color = activeAccent,
+                                        fontSize = 10.5.sp,
+                                        fontFamily = OutfitFontFamily,
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 0.2.sp
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .size(3.dp)
+                                            .clip(CircleShape)
+                                            .background(activeAccent)
+                                    )
+                                }
+                            }
                         }
                     }
                 }

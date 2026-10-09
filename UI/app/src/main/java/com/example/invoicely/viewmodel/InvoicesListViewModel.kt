@@ -18,9 +18,11 @@ class InvoicesListViewModel(private val tokenManager: TokenManager): ViewModel()
     var uiState = mutableStateOf<InvoicesListUiState>(InvoicesListUiState.Loading)
         private set
 
-    fun fetchAllInvoices(){
+    fun fetchAllInvoices(forceLoadingIndicator: Boolean = false){
         viewModelScope.launch {
-            uiState.value = InvoicesListUiState.Loading
+            if (forceLoadingIndicator || uiState.value !is InvoicesListUiState.Success) {
+                uiState.value = InvoicesListUiState.Loading
+            }
             try{
                 val token = tokenManager.getToken() ?: return@launch
                 val response = RetrofitClient.apiService.getAllInvoices("Bearer $token")

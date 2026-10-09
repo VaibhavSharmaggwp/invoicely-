@@ -22,10 +22,12 @@ class DashboardViewModel(private val tokenManager: TokenManager): ViewModel(){
     }
 
     // 3. THE NETWORK CALL
-    fun fetchDashboardData(){
+    fun fetchDashboardData(forceLoadingIndicator: Boolean = false){
         viewModelScope.launch {
-            // UI ko Loading state me daalo (in case of manual refresh)
-            uiState.value = DashboardUiState.Loading
+            // Avoid flashing skeleton if data is already loaded (Stale-While-Revalidate)
+            if (forceLoadingIndicator || uiState.value !is DashboardUiState.Success) {
+                uiState.value = DashboardUiState.Loading
+            }
 
             try{
                 // TokenManager se encrypted JWT nikaalo

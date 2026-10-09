@@ -9,6 +9,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.togetherWith
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -63,7 +73,34 @@ fun AppNavigation() {
     val settingsFactory = remember { SettingsViewModelFactory(tokenManager) }
     val settingsViewModel: SettingsViewModel = viewModel(factory = settingsFactory)
 
-    NavHost(navController = navController, startDestination = "splash") {
+    NavHost(
+        navController = navController,
+        startDestination = "splash",
+        enterTransition = {
+            slideIntoContainer(
+                AnimatedContentTransitionScope.SlideDirection.Start,
+                animationSpec = tween(260, easing = FastOutSlowInEasing)
+            ) + fadeIn(animationSpec = tween(260))
+        },
+        exitTransition = {
+            slideOutOfContainer(
+                AnimatedContentTransitionScope.SlideDirection.Start,
+                animationSpec = tween(260, easing = FastOutSlowInEasing)
+            ) + fadeOut(animationSpec = tween(260))
+        },
+        popEnterTransition = {
+            slideIntoContainer(
+                AnimatedContentTransitionScope.SlideDirection.End,
+                animationSpec = tween(260, easing = FastOutSlowInEasing)
+            ) + fadeIn(animationSpec = tween(260))
+        },
+        popExitTransition = {
+            slideOutOfContainer(
+                AnimatedContentTransitionScope.SlideDirection.End,
+                animationSpec = tween(260, easing = FastOutSlowInEasing)
+            ) + fadeOut(animationSpec = tween(260))
+        }
+    ) {
 
         composable("splash") {
             SplashScreen(onAnimationFinished = {
@@ -104,6 +141,8 @@ fun AppNavigation() {
             val historyFactory = remember { HistoryViewModelFactory(tokenManager) }
 
             val dashboardViewModel: DashboardViewModel = viewModel(factory = dashboardFactory)
+            val ledgerViewModel: InvoicesListViewModel = viewModel(factory = ledgerFactory)
+            val historyViewModel: HistoryViewModel = viewModel(factory = historyFactory)
 
             // Listen for refresh requests triggered from child destinations (e.g. create_invoice or payment)
             val currentBackStackEntry = navController.currentBackStackEntry
@@ -125,6 +164,10 @@ fun AppNavigation() {
             LaunchedEffect(currentTab) {
                 if (currentTab == "dashboard") {
                     dashboardViewModel.fetchDashboardData()
+                } else if (currentTab == "ledger") {
+                    ledgerViewModel.fetchAllInvoices()
+                } else if (currentTab == "history") {
+                    historyViewModel.fetchHistory()
                 }
             }
 
@@ -140,7 +183,7 @@ fun AppNavigation() {
                 }
             }
 
-            // 4. Pass the tab state to MainScaffold
+            // 4. Pass the tab state to MainScaffold with silky smooth tab transition
             MainScaffold(
                 currentRoute = currentTab,
                 onNavigate = { newTab -> currentTab = newTab },
@@ -148,27 +191,34 @@ fun AppNavigation() {
                     navController.navigate("create_invoice")
                 }
             ) {
-                // Switch between screens based on the selected tab
-                when (currentTab) {
-                    "dashboard" -> {
-                        DashboardScreen(
-                            uiState = dashboardViewModel.uiState.value,
-                            onNewInvoiceClick = {
-                                navController.navigate("create_invoice")
-                            },
-                            onInvoiceClick = { invoiceId ->
-                                navController.navigate("invoice_detail/$invoiceId")
-                            },
-                            onRefresh = {
-                                dashboardViewModel.fetchDashboardData()
-                            }
-                        )
-                    }
-                    "ledger" -> {
-                        val ledgerViewModel: InvoicesListViewModel = viewModel(factory = ledgerFactory)
-                        LaunchedEffect(Unit) {
-                            ledgerViewModel.fetchAllInvoices()
+                AnimatedContent(
+                    targetState = currentTab,
+                    transitionSpec = {
+                        (fadeIn(animationSpec = tween(200, easing = LinearOutSlowInEasing)) +
+                         scaleIn(initialScale = 0.985f, animationSpec = tween(200, easing = LinearOutSlowInEasing)))
+                            .togetherWith(
+                                fadeOut(animationSpec = tween(150, easing = FastOutLinearInEasing))
+                            )
+                    },
+                    label = "mainTabTransition"
+                ) { targetTab ->
+                    // Switch between screens based on the selected tab
+                    when (targetTab) {
+                        "dashboard" -> {
+                            DashboardScreen(
+                                uiState = dashboardViewModel.uiState.value,
+                                onNewInvoiceClick = {
+                                    navController.navigate("create_invoice")
+                                },
+                                onInvoiceClick = { invoiceId ->
+                                    navController.navigate("invoice_detail/$invoiceId")
+                                },
+                                onRefresh = {
+                                    dashboardViewModel.fetchDashboardData(forceLoadingIndicator = true)
+                                }
+                            )
                         }
+                    "ledger" -> {
 
                         when (val state = ledgerViewModel.uiState.value) {
                             is InvoicesListUiState.Loading -> {
@@ -218,10 +268,6 @@ fun AppNavigation() {
                         }
                     }
                     "history" -> {
-                        val historyViewModel: HistoryViewModel = viewModel(factory = historyFactory)
-                        LaunchedEffect(Unit) {
-                            historyViewModel.fetchHistory()
-                        }
 
                         when (val state = historyViewModel.uiState.value) {
                             is HistoryUiState.Loading -> {
@@ -307,6 +353,7 @@ fun AppNavigation() {
                 }
             }
         }
+    }
 
         composable("create_invoice") {
             val context = LocalContext.current
