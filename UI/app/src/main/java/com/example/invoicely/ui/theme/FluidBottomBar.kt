@@ -156,26 +156,26 @@ fun FluidBottomBar(
         modifier = modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .padding(horizontal = 20.dp, vertical = 8.dp),
+            .padding(horizontal = 12.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center
     ) {
         // Floating Sculpted Dock Pill
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(62.dp)
+                .height(68.dp)
                 .shadow(
                     elevation = 16.dp,
-                    shape = RoundedCornerShape(31.dp),
+                    shape = RoundedCornerShape(34.dp),
                     ambientColor = activeAccent.copy(alpha = 0.20f),
                     spotColor = activeAccent.copy(alpha = 0.35f)
                 )
-                .clip(RoundedCornerShape(31.dp))
+                .clip(RoundedCornerShape(34.dp))
                 .background(dockBgColor)
                 .border(
                     width = 1.dp,
                     color = dockBorderColor,
-                    shape = RoundedCornerShape(31.dp)
+                    shape = RoundedCornerShape(34.dp)
                 )
                 // 👆 INTERACTIVE DRAG-TO-SELECT
                 .pointerInput(tabs) {
@@ -208,9 +208,9 @@ fun FluidBottomBar(
                 val maxIdx = max(headIndex, tailIndex)
                 val stretchFactor = maxIdx - minIdx // 0.0 at rest, elongates during flight
 
-                val restingPillWidth = tabWidth * 0.74f
-                val pillWidth = restingPillWidth + tabWidth * (stretchFactor * 0.40f)
-                val pillHeight = 44.dp
+                val restingPillWidth = (tabWidth * 0.90f).coerceAtMost(tabWidth - 4.dp)
+                val pillWidth = restingPillWidth + tabWidth * (stretchFactor * 0.35f)
+                val pillHeight = 52.dp
 
                 val centerIdx = (headIndex + tailIndex) / 2f
                 val pillOffsetX = (tabWidth * centerIdx) + (tabWidth - pillWidth) / 2f
@@ -218,9 +218,9 @@ fun FluidBottomBar(
                 // 💧 1. AMBIENT GLOW BACKDROP
                 Box(
                     modifier = Modifier
-                        .offset(x = pillOffsetX - 10.dp, y = (62.dp - (pillHeight + 10.dp)) / 2)
-                        .width(pillWidth + 20.dp)
-                        .height(pillHeight + 10.dp)
+                        .offset(x = pillOffsetX - 6.dp, y = (68.dp - (pillHeight + 8.dp)) / 2)
+                        .width(pillWidth + 12.dp)
+                        .height(pillHeight + 8.dp)
                         .background(
                             brush = Brush.radialGradient(
                                 colors = listOf(
@@ -228,14 +228,14 @@ fun FluidBottomBar(
                                     Color.Transparent
                                 )
                             ),
-                            shape = RoundedCornerShape((pillHeight + 10.dp) / 2)
+                            shape = RoundedCornerShape((pillHeight + 8.dp) / 2)
                         )
                 )
 
                 // 💧 2. LIQUID SELECTION CAPSULE BODY
                 Box(
                     modifier = Modifier
-                        .offset(x = pillOffsetX, y = (62.dp - pillHeight) / 2)
+                        .offset(x = pillOffsetX, y = (68.dp - pillHeight) / 2)
                         .width(pillWidth)
                         .height(pillHeight)
                         .clip(RoundedCornerShape(pillHeight / 2))
@@ -272,7 +272,7 @@ fun FluidBottomBar(
                     val isSelected = index == activeIndex
 
                     val iconScale by animateFloatAsState(
-                        targetValue = if (isSelected) 1.14f else 1.0f,
+                        targetValue = if (isSelected) 1.06f else 1.0f,
                         animationSpec = spring(
                             dampingRatio = Spring.DampingRatioLowBouncy,
                             stiffness = Spring.StiffnessMedium
@@ -301,11 +301,11 @@ fun FluidBottomBar(
                                 contentDescription = tab.label,
                                 tint = if (isSelected) activeAccent else inactiveIconColor,
                                 modifier = Modifier
-                                    .size(22.dp)
+                                    .size(21.dp)
                                     .scale(iconScale)
                             )
 
-                            // Label and glowing pip expand dynamically when active
+                            // Label expands dynamically when active
                             AnimatedVisibility(
                                 visible = isSelected,
                                 enter = fadeIn(tween(160)) + expandVertically(tween(160)),
@@ -318,17 +318,11 @@ fun FluidBottomBar(
                                     Text(
                                         text = tab.label,
                                         color = activeAccent,
-                                        fontSize = 10.5.sp,
+                                        fontSize = 10.sp,
                                         fontFamily = OutfitFontFamily,
-                                        fontWeight = FontWeight.Bold,
-                                        letterSpacing = 0.2.sp
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Box(
-                                        modifier = Modifier
-                                            .size(3.dp)
-                                            .clip(CircleShape)
-                                            .background(activeAccent)
+                                        fontWeight = FontWeight.SemiBold,
+                                        letterSpacing = 0.2.sp,
+                                        maxLines = 1
                                     )
                                 }
                             }
