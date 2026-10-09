@@ -22,4 +22,11 @@ public class InvoiceDetailResponse {
     private BigDecimal taxAmount;
     private BigDecimal grandTotal;
     private String memoNotes;
+
+    // 🚀 NEW: Auto-Injected Business Details
+    private String businessLegalName;
+    private String businessGstin;
+    private String bankAccountNumber;
+    private String bankIfscCode;
+    private String upiVpa;
 }

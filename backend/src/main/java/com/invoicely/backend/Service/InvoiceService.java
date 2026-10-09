@@ -6,18 +6,12 @@ import com.invoicely.backend.dto.*;
 
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
-import com.invoicely.backend.entity.Business;
-import com.invoicely.backend.entity.Customer;
-import com.invoicely.backend.entity.Invoice;
-import com.invoicely.backend.entity.InvoiceItem;
-import com.invoicely.backend.entity.PaymentHistory;
+
+import com.invoicely.backend.entity.*;
 import com.invoicely.backend.enums.InvoiceStatus;
 import com.invoicely.backend.event.InvoiceCreatedEvent;
 import com.invoicely.backend.kafka.InvoiceProducer;
-import com.invoicely.backend.repository.BusinessRepository;
-import com.invoicely.backend.repository.CustomerRepository;
-import com.invoicely.backend.repository.InvoiceRepository;
-import com.invoicely.backend.repository.PaymentHistoryRepository;
+import com.invoicely.backend.repository.*;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.CacheManager;
@@ -47,16 +41,17 @@ public class InvoiceService {
     private final RazorpayService razorpayService;
     private final PaymentHistoryRepository paymentRepository;
     private final CacheManager cacheManager;
+    private final BusinessProfileRepository businessProfileRepository;
     
 
 
-    // Overloaded method using userEmail from JWT to find business and evict dashboard cache
-    @org.springframework.cache.annotation.CacheEvict(value = "dashboard_summary", key = "#userEmail")
     @Transactional
     public InvoiceResponseDTO createNewInvoice(String userEmail, CreateInvoiceRequest request) {
         Business business = businessRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("Business not found"));
-        return createNewInvoice(business.getId(), request);
+        InvoiceResponseDTO response = createNewInvoice(business.getId(), request);
+        evictDashboardCache(business.getId());
+        return response;
     }
 
     // @Transactional ensures ki agar item save hote waqt error aaye, toh poora invoice cancel ho jaye (Rollback)
@@ -161,6 +156,9 @@ public class InvoiceService {
             System.err.println("Warning: Kafka event skipped: " + e.getMessage());
         }
 
+        // Evict dashboard cache so UI instantly reflects the new invoice
+        evictDashboardCache(businessId);
+
         // 9. Return clean response DTO
         return InvoiceResponseDTO.builder()
                 .id(savedInvoice.getId())
@@ -237,6 +235,8 @@ public class InvoiceService {
                 .build();
 
         invoiceProducer.sendInvoiceCreatedEvent(event);
+
+        evictDashboardCache(business.getId());
 
         // 6. Clean Response DTO return karo
         return InvoiceResponseDTO.builder()
@@ -370,6 +370,12 @@ public class InvoiceService {
         Invoice invoice = invoiceRepository.findByIdAndBusinessId(invoiceId, businessId)
                 .orElseThrow(() -> new RuntimeException("Invoice not found or unauthorized"));
 
+        // Fetch the Business Profile
+        // Agar user ne abhi tak settings me details save nahi ki hain, toh empty object use karo (taaki app crash na ho)
+        BusinessProfile profile = businessProfileRepository.findById(businessId)
+                .orElse(new BusinessProfile());
+
+
         // 2. Map Database Line Items to DTOs
         List<LineItemDTO> itemDTOS = invoice.getItems().stream().map(item -> {
             LineItemDTO dto = new LineItemDTO();
@@ -418,6 +424,12 @@ public class InvoiceService {
                 .taxAmount(taxAmount)
                 .grandTotal(grandTotal)
                 .memoNotes(invoice.getMemo() != null ? invoice.getMemo() : "")
+                // 🚀 Injecting the Profile Data!
+                .businessLegalName(profile.getLegalEntityName() != null && !profile.getLegalEntityName().isBlank() ? profile.getLegalEntityName() : "Update in Settings")
+                .businessGstin(profile.getGstin() != null ? profile.getGstin() : "")
+                .bankAccountNumber(profile.getAccountNumber() != null ? profile.getAccountNumber() : "")
+                .bankIfscCode(profile.getIfscCode() != null ? profile.getIfscCode() : "")
+                .upiVpa(profile.getUpiVpa() != null ? profile.getUpiVpa() : "")
                 .build();
     }
 
@@ -471,9 +483,7 @@ public class InvoiceService {
         invoiceRepository.save(invoice);
 
         // Evict dashboard cache so UI instantly reflects new revenue
-        if (cacheManager != null && cacheManager.getCache("dashboard_summary") != null) {
-            cacheManager.getCache("dashboard_summary").evict(businessId);
-        }
+        evictDashboardCache(businessId);
     }
 
     @Transactional
@@ -595,5 +605,13 @@ public class InvoiceService {
         });
 
         return events;
+    }
+
+    private void evictDashboardCache(UUID businessId) {
+        if (cacheManager != null && cacheManager.getCache("dashboard_summary") != null) {
+            cacheManager.getCache("dashboard_summary").evict(businessId);
+            cacheManager.getCache("dashboard_summary").evict(businessId.toString());
+            System.out.println("REDIS: Evicted dashboard_summary for businessId: " + businessId);
+        }
     }
 }

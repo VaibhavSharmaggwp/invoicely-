@@ -60,10 +60,10 @@ public class PaymentService {
 
             // 4. Cache clear karo taaki dashboard update ho jaye
 
-            String businessEmail = invoice.getBusiness().getEmail();
             if(cacheManager.getCache("dashboard_summary") != null) {
-                cacheManager.getCache("dashboard_summary").evict(businessEmail);
-                System.out.println("REDIS: Cleared dashboard cache for " + businessEmail);
+                cacheManager.getCache("dashboard_summary").evict(invoice.getBusiness().getId());
+                cacheManager.getCache("dashboard_summary").evict(invoice.getBusiness().getId().toString());
+                System.out.println("REDIS: Cleared dashboard cache for " + invoice.getBusiness().getId());
             }
         }
     }

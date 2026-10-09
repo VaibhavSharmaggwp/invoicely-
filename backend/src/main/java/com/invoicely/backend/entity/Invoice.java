@@ -73,9 +73,14 @@ public class Invoice {
     protected void onCreate(){
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
-        // Default state DRAFT rakhte hain naye invoice ke liye
         if(this.status == null){
-            this.status = InvoiceStatus.DRAFT;
+            this.status = InvoiceStatus.ISSUED;
+        }
+        if(this.issueDate == null){
+            this.issueDate = LocalDate.now();
+        }
+        if(this.dueDate == null){
+            this.dueDate = LocalDate.now().plusDays(15);
         }
     }
     @PreUpdate

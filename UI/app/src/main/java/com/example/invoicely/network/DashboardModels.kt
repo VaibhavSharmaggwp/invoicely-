@@ -64,7 +64,14 @@ data class InvoiceDetailResponse(
     val subtotal: Double,
     val taxAmount: Double,
     val grandTotal: Double,
-    val memoNotes: String
+    val memoNotes: String,
+
+    // 🚀 Auto-Injected Business Details
+    val businessLegalName: String = "",
+    val businessGstin: String = "",
+    val bankAccountNumber: String = "",
+    val bankIfscCode: String = "",
+    val upiVpa: String = ""
 )
 
 data class RecordPaymentRequest(

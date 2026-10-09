@@ -43,14 +43,8 @@ class DashboardViewModel(private val tokenManager: TokenManager): ViewModel(){
                 if(response.isSuccessful && response.body() != null){
                     val data = response.body()!!
 
-                    // Agar account naya hai aur ek bhi invoice nahi hai, toh Empty state dikhao
-                    if(data.revenueThisMonth == 0.0
-                        && data.recentInvoices.isEmpty()){
-                        uiState.value = DashboardUiState.Empty
-                    }else{
-                        // Data mil gaya, Success state me data pass karo!
-                        uiState.value = DashboardUiState.Success(data)
-                    }
+                    // Data mil gaya, Success state me data pass karo!
+                    uiState.value = DashboardUiState.Success(data)
 
                     }else{
                         uiState.value = DashboardUiState.Error("Error: ${response.code()}")

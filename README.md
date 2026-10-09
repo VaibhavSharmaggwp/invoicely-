@@ -75,8 +75,8 @@ flowchart TD
 - **At-Least-Once Delivery**: Kafka consumer groups (`NotificationConsumer`) ensure reliable message delivery and resilience against downstream SMTP or PDF rendering failures.
 
 ### 2. 🚀 Low-Latency Caching & Distributed Concurrency Control (Redis)
-- **Sub-Millisecond Financial Analytics**: Dashboard metrics, revenue aggregations, and recent transaction summaries are cached via Spring Data Redis (`@Cacheable(value = "dashboard_summary", key = "#businessId")`) with a configurable TTL.
-- **Zero-Stale Data via Automated Eviction**: Stale caches are atomically invalidated (`@CacheEvict`) upon any state-mutating event—such as issuing a new invoice or reconciling a payment webhook.
+- **Sub-Millisecond Financial Analytics**: Dashboard metrics, revenue aggregations, dynamic growth rates, and recent transaction summaries are cached via Spring Data Redis (`@Cacheable(value = "dashboard_summary", key = "#businessId")`) with a configurable 10-minute TTL.
+- **Zero-Stale Data via Automated Invalidation**: Invoices and payments trigger automatic cache-aside evictions (`evictDashboardCache(businessId)`) across both `UUID` and `String` key representations upon invoice creation or payment settlement, ensuring instant UI synchronization.
 - **Distributed Locking (`DistributedLockService`)**: Utilizes Redis atomic `SETNX` (set if not exists) primitives with expiration safety to coordinate scheduled jobs (`InvoiceReminderScheduler`) across horizontally scaled backend replicas, preventing duplicate reminders or race conditions.
 
 ### 3. 🛡️ Perimeter Defense & Multi-Tenant Security (Spring Security 6 + Bucket4j)
@@ -96,17 +96,26 @@ flowchart TD
 - **Automated Overdue Auditing**: Background cron scheduler scans for overdue accounts and automatically enqueues reminder events to Kafka without blocking active transactions.
 - **Financial CSV Export**: Dynamic streaming export (`GET /api/v1/reports/export`) for external bookkeeping and accounting software reconciliation.
 
+### 6. 🏛️ Merchant Profile & Multi-Rail Banking Settlement Engine
+- **Statutory Corporate Profile**: Centralized `BusinessProfile` storage persisting legal entity name, trade name, GSTIN, registered address, PIN code, and contact information.
+- **Strict Indian Statutory Validation**: Enforces GSTIN formatting (`^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$`) and RBI IFSC code standards (`^[A-Z]{4}0[A-Z0-9]{6}$`).
+- **Zero-Manual Re-entry Auto-Injection**: When invoices are issued, the server seamlessly injects the merchant's legal profile, GSTIN, and Bank/UPI settlement instructions directly into the invoice record and PDF document.
+- **Multi-Rail Payout & QR Integration**: Real-time Bank card with live account number masking/unmasking and UPI VPA verification for streamlined customer settlements.
+
 ---
 
 ## 📱 Client Application — Android Jetpack Compose
 
 While the primary focus is backend mastery, Invoicely includes a production-grade **Android Native Application** built with **Jetpack Compose** and **Material 3** to serve as a real-world client consumer:
 
-- **Financial Ledger Screen (`HistoryScreen.kt`)**: Displays real-time settled inflow hero metrics, live ledger tags, client search, filter chips (`ALL`, `SETTLED`, `ISSUED`, `OVERDUE`), and interactive transaction receipt bottom sheets with direct navigation to related invoices.
-- **Bento Financial Dashboard**: High-contrast, card-based dashboard showing monthly revenue, settled vs. outstanding volume, and quick action workflows.
-- **Digital Paper Receipt**: Perforated digital voucher view with dash-path Canvas borders, dynamic payment links, and native Android sharing (`Intent.ACTION_SEND`).
+- **Bento Financial Dashboard (`DashboardScreen.kt`)**: Displays the live **Revenue · This Month** hero card with dynamic growth trends (`▲`/`▼`), real-time **Received** vs. **Outstanding** volume and counts, **Quick Action** strip, and chronological recent invoices with zero mock data.
+- **Cross-Destination Reactive State Synchronization (`AppNavigation.kt`)**: Utilizes Compose `savedStateHandle` (`refresh_dashboard`) and backstack observation so creating an invoice or recording a payment immediately updates the dashboard upon return.
+- **Company Details (`CompanyDetailsScreen.kt`)**: Comprehensive form validating GSTIN regex patterns and persisting corporate metadata.
+- **Payout & Settlement Rail (`BankAndUpiScreen.kt`)**: Features an interactive dynamic bank card preview updating in real time with bank name, account number, IFSC, and UPI VPA.
+- **Digital Paper Voucher (`InvoiceDetailScreen.kt`)**: Perforated digital voucher view with dash-path Canvas borders, auto-injected Payment & Settlement instructions, and record payment bottom sheet.
+- **Financial Ledger Screen (`HistoryScreen.kt`)**: Real-time settled inflow hero metrics, live ledger tags, client search, filter chips (`ALL`, `SETTLED`, `ISSUED`, `OVERDUE`), and interactive transaction receipt bottom sheets.
 - **Authentication & Onboarding (`AuthScreen.kt`)**: Polished authentication flow featuring real-time password strength evaluation, match validation, and Google OAuth 2.0 integration.
-- **Reactive MVI Architecture**: Powered by ViewModels, Kotlin Coroutines, and Retrofit 2 with zero mock data—every screen binds directly to live Spring Boot REST endpoints.
+- **Reactive MVI Architecture**: Powered by ViewModels, Kotlin Coroutines, and Retrofit 2 with state-driven rendering.
 
 ---
 
@@ -142,18 +151,22 @@ While the primary focus is backend mastery, Invoicely includes a production-grad
 | `POST` | `/api/v1/auth/google` | Public | Verify Google OAuth 2.0 ID Token and authenticate/provision merchant |
 | `GET` | `/api/v1/auth/dev-token` | Dev/Public | Generate immediate JWT token for local API and curl testing |
 
+### 📊 Real-Time Dashboard & Analytics (`/api/v1/dashboard`)
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/v1/dashboard/summary` | Authenticated | Live and Redis-cached KPI metrics (monthly revenue, growth %, received, outstanding, overdue, recent invoices) |
+
 ### 📄 Invoices & Ledger (`/api/v1/invoices`)
 | Method | Endpoint | Access | Description |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/api/v1/invoices` | Authenticated | Create invoice with auto customer provisioning and server-side GST math |
+| `POST` | `/api/v1/invoices` | Authenticated | Create invoice with auto customer provisioning, line items, and server-side GST math |
 | `GET` | `/api/v1/invoices` | Authenticated | List all invoices for authenticated business tenant |
 | `GET` | `/api/v1/invoices?page=0&size=10` | Authenticated | Paginated and sorted invoice collection |
-| `GET` | `/api/v1/invoices/{id}` | Authenticated | Fetch single invoice detail with customer, line items, and tax breakdown |
+| `GET` | `/api/v1/invoices/{id}` | Authenticated | Fetch single invoice detail with customer, line items, and auto-injected banking details |
 | `GET` | `/api/v1/invoices/{id}/pdf` | Authenticated | Generate and stream downloadable invoice PDF |
 | `POST` | `/api/v1/invoices/{id}/payment-link` | Authenticated | Generate unique Razorpay payment link URL |
-| `POST` | `/api/v1/invoices/{id}/payments` | Authenticated | Manually record an offline payment (Cash, Bank Transfer, Cheque) |
+| `POST` | `/api/v1/invoices/{id}/payments` | Authenticated | Manually record offline payment (Cash, Bank Transfer, Cheque) & evict dashboard cache |
 | `GET` | `/api/v1/invoices/history` | Authenticated | **Unified Financial Ledger**: Real payment settlements and invoice lifecycle audit trail |
-| `GET` | `/api/v1/invoices/dashboard-summary` | Authenticated | Cached revenue, outstanding dues, and recent activity metrics |
 
 ### 🌐 Public Portal & Webhooks (`/api/v1/public`, `/api/v1/webhooks`)
 | Method | Endpoint | Access | Description |
@@ -161,13 +174,17 @@ While the primary focus is backend mastery, Invoicely includes a production-grad
 | `GET` | `/api/v1/public/invoices/{id}` | Public | Public read-only digital invoice view for clients |
 | `POST` | `/api/v1/webhooks/razorpay` | Public (HMAC Verified) | Process Razorpay payment webhooks with cryptographic HMAC-SHA256 signature verification |
 
-### 📊 Reports & Business Profile (`/api/v1/reports`, `/api/v1/business`)
+### 🏢 Business Profile & Payout Rails (`/api/v1/business`)
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/v1/business/profile` | Authenticated | Retrieve company details, GSTIN, registered address, and Bank/UPI settlement rails |
+| `PUT` | `/api/v1/business/profile` | Authenticated | Update company metadata, GSTIN, and Bank/UPI payout account details |
+
+### 📈 Reports (`/api/v1/reports`)
 | Method | Endpoint | Access | Description |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/api/v1/reports/summary` | Authenticated | Aggregated financial metrics across custom date ranges |
 | `GET` | `/api/v1/reports/export` | Authenticated | Stream dynamic financial report as downloadable CSV |
-| `GET` | `/api/v1/business/profile` | Authenticated | Retrieve profile and settings of current authenticated merchant |
-| `PUT` | `/api/v1/business/profile` | Authenticated | Update business metadata, contact details, or tax numbers |
 
 ---
 

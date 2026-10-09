@@ -134,12 +134,31 @@ fun DashboardSuccessLayout(
             )
         }
 
-        items(data.recentInvoices) { invoice ->
-            RecentInvoiceRow(
-                invoice = invoice,
-                onClick = { onInvoiceClick(invoice.id) }
-            )
-            Spacer(modifier = Modifier.height(12.dp))
+        if (data.recentInvoices.isEmpty()) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color.White)
+                        .padding(24.dp),
+                    contentAlignment = androidx.compose.ui.Alignment.Center
+                ) {
+                    Text(
+                        text = "No invoices yet. Tap + New Invoice to get started.",
+                        color = Color.Gray,
+                        fontSize = 14.sp
+                    )
+                }
+            }
+        } else {
+            items(data.recentInvoices) { invoice ->
+                RecentInvoiceRow(
+                    invoice = invoice,
+                    onClick = { onInvoiceClick(invoice.id) }
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+            }
         }
     }
 }

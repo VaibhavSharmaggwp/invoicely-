@@ -15,6 +15,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -102,8 +103,30 @@ fun AppNavigation() {
             val ledgerFactory = remember { InvoicesListViewModelFactory(tokenManager) }
             val historyFactory = remember { HistoryViewModelFactory(tokenManager) }
 
+            val dashboardViewModel: DashboardViewModel = viewModel(factory = dashboardFactory)
+
+            // Listen for refresh requests triggered from child destinations (e.g. create_invoice or payment)
+            val currentBackStackEntry = navController.currentBackStackEntry
+            val refreshDashboardState = currentBackStackEntry
+                ?.savedStateHandle
+                ?.getStateFlow("refresh_dashboard", false)
+                ?.collectAsState(initial = false)
+
+            LaunchedEffect(refreshDashboardState?.value) {
+                if (refreshDashboardState?.value == true) {
+                    dashboardViewModel.fetchDashboardData()
+                    currentBackStackEntry?.savedStateHandle?.set("refresh_dashboard", false)
+                }
+            }
+
             // 2. State to track which tab is currently selected
             var currentTab by remember { mutableStateOf("dashboard") }
+
+            LaunchedEffect(currentTab) {
+                if (currentTab == "dashboard") {
+                    dashboardViewModel.fetchDashboardData()
+                }
+            }
 
             // 3. Intercept back press: navigate back to dashboard first, or logout if already on dashboard
             BackHandler {
@@ -128,7 +151,6 @@ fun AppNavigation() {
                 // Switch between screens based on the selected tab
                 when (currentTab) {
                     "dashboard" -> {
-                        val dashboardViewModel: DashboardViewModel = viewModel(factory = dashboardFactory)
                         DashboardScreen(
                             uiState = dashboardViewModel.uiState.value,
                             onNewInvoiceClick = {
@@ -298,6 +320,9 @@ fun AppNavigation() {
                     navController.popBackStack()
                 },
                 onSaveSuccess = {
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("refresh_dashboard", true)
                     navController.popBackStack()
                 }
             )
@@ -327,6 +352,9 @@ fun AppNavigation() {
                 },
                 onPaymentSuccess = {
                     viewModel.fetchInvoiceDetails(invoiceId)
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("refresh_dashboard", true)
                 }
             )
         }

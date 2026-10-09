@@ -93,8 +93,11 @@ fun HeroCard(revenue: Double, growthPercentage: Double){
                         )
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ){
+                    val isPositive = growthPercentage >= 0
+                    val arrow = if (isPositive) "▲" else "▼"
+                    val formattedGrowth = String.format(Locale.US, "%.1f", Math.abs(growthPercentage))
                     Text(
-                        text = "▲ $growthPercentage%",
+                        text = "$arrow $formattedGrowth%",
                         color = chartreuseColor,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold

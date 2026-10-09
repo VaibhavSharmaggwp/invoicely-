@@ -4,6 +4,7 @@ import android.content.Intent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,6 +30,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -583,6 +585,74 @@ fun InvoiceDetailSuccessLayout(
                             )
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // 🚀 SHOW AUTO-INJECTED BANK DETAILS ONLY IF THEY EXIST
+                    if (invoice.bankAccountNumber.isNotBlank() || invoice.upiVpa.isNotBlank()) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color(0xFFFAFAF7), RoundedCornerShape(12.dp))
+                                .border(1.dp, Color(0xFFE5E3D8), RoundedCornerShape(12.dp))
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                "PAYMENT & SETTLEMENT INSTRUCTIONS",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Gray,
+                                letterSpacing = 1.sp
+                            )
+
+                            if (invoice.bankAccountNumber.isNotBlank()) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("Account No:", fontSize = 12.sp, color = Color.Gray)
+                                    Text(
+                                        invoice.bankAccountNumber,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF151A11)
+                                    )
+                                }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("IFSC Code:", fontSize = 12.sp, color = Color.Gray)
+                                    Text(
+                                        invoice.bankIfscCode,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF151A11)
+                                    )
+                                }
+                            }
+
+                            if (invoice.upiVpa.isNotBlank()) {
+                                HorizontalDivider(
+                                    color = Color(0xFFE5E3D8),
+                                    modifier = Modifier.padding(vertical = 4.dp)
+                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("UPI VPA:", fontSize = 12.sp, color = Color.Gray)
+                                    Text(
+                                        invoice.upiVpa,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF151A11)
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -634,7 +704,10 @@ fun InvoiceDetailScreenPreview() {
                 subtotal = 240000.0,
                 taxAmount = 43200.0,
                 grandTotal = 283200.0,
-                memoNotes = "Please process the payment to the HDFC Current Account ending in 4918. Thank you for your business!"
+                memoNotes = "Please process the payment to the HDFC Current Account ending in 4918. Thank you for your business!",
+                bankAccountNumber = "50100429182049",
+                bankIfscCode = "HDFC0001234",
+                upiVpa = "invoicely@okhdfcbank"
             ),
             onBackClick = {},
             onDownloadPdfClick = {},
